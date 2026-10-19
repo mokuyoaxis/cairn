@@ -142,7 +142,7 @@ python3 cairn.py lint
 - 涉及 Hook 的测试用 `StringIO` 模拟 stdin/stdout；
 - 安全相关改动应同时覆盖“正常路径 + 拒绝路径”。
 
-## 7. 当前 Phase 0 / 近期优先
+## 7. Phase 0 已完成 / 近期优先
 
 已完成：
 
@@ -157,7 +157,6 @@ python3 cairn.py lint
 
 剩余：
 
-- **Git 初始基线**（需用户明确批准后 commit；当前 main unborn）；
 - **Experience Contract v0**：source / verified_at / scope / status / trust / 准入条件；
 - **统一 Recall / Explain**：同候选、同门控、同拒绝理由；
 - **Trust & Applicability Eval**：恶意/过期/scope/冲突/abstention；

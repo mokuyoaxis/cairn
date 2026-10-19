@@ -169,7 +169,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 近期重点是**契约、信任与度量**，不是功能数量：
 
-- 建立首个 Git 基线（待所有者批准；Phase 0 正确性修复已完成）；
+- Phase 0 正确性修复与首个 Git 基线已完成；
 - 定义 **Experience Contract v0**（source、verification、lifecycle、applicability、admission）；
 - 统一 **Recall / Explain** 的候选、门控与拒绝理由；
 - 建立 **Trust & Applicability Evaluation**，覆盖恶意、过期、scope 不匹配、冲突与 quarantine 条目；

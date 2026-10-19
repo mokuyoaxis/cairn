@@ -169,7 +169,7 @@ Injection length is reported both per query (a no-hit query counts as zero) and 
 
 Near-term work is about **contracts, trust, and measurement**, not feature count:
 
-- establish the first Git baseline (pending owner approval; Phase 0 correctness fixes are complete);
+- Phase 0 correctness fixes and the first Git baseline are complete;
 - define **Experience Contract v0** (source, verification, lifecycle, applicability, admission);
 - unify **Recall / Explain** around the same candidates, gates, and refusal reasons;
 - build a **Trust & Applicability Evaluation** covering malicious, stale, out-of-scope, conflicting, and quarantined entries;
