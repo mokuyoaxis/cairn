@@ -48,3 +48,6 @@ jobs:
           python cairn.py lint
           python cairn.py eval
           python cairn.py audit
+
+      - name: Contract admission eval
+        run: python eval/contract_eval.py

@@ -11,7 +11,7 @@ Cairn 的评测目标是**回归与适用性判断**，不是排行榜。当前�
 - 4.0% 负例仍被注入；安全评测需要单独覆盖恶意/过期/scope 不匹配内容。
 - Experience Contract v0 已实现：注入指标只统计 `active + verified + source + verified_at` 的条目；
   示例库的 `trust: verified` 是 fixture 元数据，不是生产验证。
-- 近期优先建设 **Trust & Applicability Eval**，而不是只扩大 Recall。
+- 已加 **Contract admission eval** 最小切片；完整 Trust & Applicability Eval 仍待做，而不是只扩大 Recall。
 
 ## 1. 当前评测集
 
@@ -131,6 +131,25 @@ CAIRN_HOME=./examples python3 cairn.py eval
 - `1`：未过门槛；
 - `2`：评测集不存在/参数错误。
 
+### 5.1 Contract admission eval
+
+这是 Trust & Applicability Eval 的最小切片，使用独立的混合信任 fixture，不污染
+示例库：
+
+```bash
+python3 eval/contract_eval.py
+```
+
+它检查：
+
+- `verified + active + source + verified_at` 能注入；
+- unverified / quarantined / deprecated / archived 不注入；
+- 只有不可注入条目命中时保持沉默；
+- 所有实际注入的条目都通过 `is_injectable()`。
+
+fixture 与用例说明见 [`eval/README.md`](../eval/README.md)。当前仍是
+lint-warning-only 的合法库：不可注入条目可以存在，只是不能进入上下文。
+
 ## 6. 如何扩展评测集
 
 1. 在 `eval/queries.jsonl` 增加 `{"query": "...", "expect": ["slug"]}`；
@@ -142,7 +161,11 @@ CAIRN_HOME=./examples python3 cairn.py eval
 
 ## 7. 后续评测计划
 
-- **Trust & Applicability Eval（近期优先）**：覆盖恶意、过期、scope 不匹配、冲突、未验证/quarantine 条目；记录 Correct Abstention、Malicious/Stale Injection、错误交付，而不只是 Recall；
+- **Trust & Applicability Eval（近期优先）**：
+  - 已加最小切片：`eval/contract_eval.py` 覆盖 verified/unverified/quarantine/
+    deprecated/archived 的准入与正确沉默；
+  - 仍待做：恶意指令、过期 `verified_at`、scope 不匹配、冲突条目；
+    记录 Correct Abstention、Malicious/Stale Injection、错误交付，而不只是 Recall；
 - **v0.2**：正例扩到 ≥80，补足挑战性负例；
 - **v0.3**：扩到 150–200 条，覆盖跨项目/版本/冲突/过时经验；
 - **规模实验**：12 / 100 / 500 / 1000 / 5000 条，记录 p50/p95/p99、内存、注入率、误注入率；

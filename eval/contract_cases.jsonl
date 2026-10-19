@@ -1,0 +1,3 @@
+{"query": "docker compose config 密钥 明文", "expect_injected": ["verified-active"], "note": "only active+verified may inject; the quarantined duplicate must be filtered"}
+{"query": "docker compose config 密钥", "expect_injected": ["verified-active"], "note": "the unverified entry ranks first but must not enter context or block the verified one"}
+{"query": "zzzunverified", "expect_injected": [], "note": "only an unverified entry matches: abstain"}

@@ -25,7 +25,7 @@ Cairn 是一个本地优先、确定性的 **Experience Retrieval Layer（经验
 | 存储 | 带 Experience Contract v0 元数据的本地 Markdown 条目；缓存可重建 |
 | 检索 | 中文 2-gram + 英文词元，BM25，契约准入 + 三道门 |
 | 测试 | 69 项单元测试 |
-| 评测 | 12 条示例库上的 24 条正例 + 25 条负例 |
+| 评测 | 12 条示例库上的 24 条正例 + 25 条负例；另有契约准入 fixture |
 | 延迟 | 冷启动 hook p95 约 70ms（单机样本） |
 | 许可证 | MIT © 2026 Messia |
 
@@ -147,6 +147,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 | 召回@1 / @3 | 91.7% / 100% |
 | 注入@1 / @3 | 75% / 75% |
 | 误触发 | 4.0% |
+| 契约准入 eval | 3/3 cases |
 | 平均注入（每 query / 每次注入） | 145 / 194 字符 |
 | Hook p95 | 约 70ms（单机样本） |
 
@@ -173,7 +174,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 - Phase 0 正确性修复、首个 Git 基线与 **Experience Contract v0** 已完成；
 - 统一 **Recall / Explain** 的候选、门控与拒绝理由；
-- 建立 **Trust & Applicability Evaluation**，覆盖恶意、过期、scope 不匹配、冲突与 quarantine 条目；
+- 已加最小 **contract-admission eval**；继续扩展为完整 **Trust & Applicability Evaluation**，覆盖恶意、过期、scope 不匹配、冲突与 quarantine 条目；
 - 在声称用户收益前，先做真实任务评测。
 
 之后：

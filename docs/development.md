@@ -6,7 +6,7 @@
 
 ## 0. 摘要
 
-- 69 项单元测试；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + audit。
+- 69 项单元测试；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + contract eval + audit。
 - 核心 `cairn.py` 1198 行，零第三方依赖。
 - 单文件核心；控制台/旁路必须独立。
 - Experience Contract v0 已实现；近期优先 Trust & Applicability Eval 与统一 Recall/Explain；控制台暂缓。
@@ -30,7 +30,10 @@ cairn/
 │   └── development.md     # 本文件
 ├── eval/
 │   ├── queries.jsonl      # 24 条正例
-│   └── negatives.jsonl    # 25 条负例
+│   ├── negatives.jsonl    # 25 条负例
+│   ├── contract/entries/  # 混合信任 fixture（7 条）
+│   ├── contract_cases.jsonl
+│   └── contract_eval.py   # 契约准入最小切片
 ├── examples/
 │   ├── README.md          # 示例说明
 │   └── entries/           # 12 条示例
@@ -51,6 +54,9 @@ cp -a examples/. "$TMP"/
 CAIRN_HOME="$TMP" python3 cairn.py lint
 CAIRN_HOME="$TMP" python3 cairn.py eval
 CAIRN_HOME="$TMP" python3 cairn.py audit
+
+# 契约准入最小切片（独立 fixture，不污染示例库）
+python3 eval/contract_eval.py
 ```
 
 当前基线（2026-10-19）：
@@ -58,6 +64,7 @@ CAIRN_HOME="$TMP" python3 cairn.py audit
 - 69 项测试全绿；
 - 12 条示例，lint 通过（全部为 `active + verified + source + verified_at` 的 fixture 条目）；
 - 24+25 评测：召回@1 91.7% / @3 100%，注入@1/@3 75%，误触发 4.0%；
+- 契约准入 eval：3/3 cases（verified 注入；unverified/quarantine/deprecated/archived 沉默）；
 - 平均注入 145 字符/query（未注入计 0），实际注入 18/24 次、194 字符/次；
 - `cairn.py` 1198 行，零第三方依赖；
 - hook 冷启动 p95 约 70ms（本机样本）。
@@ -76,6 +83,7 @@ CAIRN_HOME="$TMP" python3 cairn.py audit
 | 非空库 | 示例副本的 `entries/*.md` 必须存在 |
 | lint | 在临时示例库副本上跑 `cairn lint` |
 | eval | 注入@3 与误触发门槛 |
+| contract eval | `python eval/contract_eval.py`，混合信任 fixture 的准入与沉默 |
 | audit | entries + log/session + cache |
 
 CI 不安装第三方依赖；没有网络调用。README 顶部的 CI badge 指向该 workflow。
@@ -162,12 +170,14 @@ python3 cairn.py lint
 - 空库 `lint`/`audit` 改为 fail-closed，不再 vacuous pass；
 - 旧日志的审计/轮转说明已写入 `docs/security.md` 与 `docs/usage.md`；
 - **Experience Contract v0**：`status` / `trust` / `verified_at` / `source`，
-  自动注入要求 `active + verified + source + verified_at`；导入默认 quarantine。
+  自动注入要求 `active + verified + source + verified_at`；导入默认 quarantine；
+- **Contract admission eval 最小切片**：`eval/contract_eval.py` 覆盖
+  verified/unverified/quarantine/deprecated/archived 的准入与正确沉默。
 
 剩余：
 
 - **统一 Recall / Explain**：同候选、同门控、同拒绝理由；
-- **Trust & Applicability Eval**：恶意/过期/scope/冲突/abstention；
+- **完整 Trust & Applicability Eval**：恶意/过期/scope/冲突/abstention；
 - **完整控制台暂缓**（D17）：先统一契约与评测，未来 Ask 优先于 Library。
 
 ## 8. 文档维护

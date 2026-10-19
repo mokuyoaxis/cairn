@@ -25,7 +25,7 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 | Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
 | Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, three gates |
 | Tests | 69 unit tests |
-| Evaluation | 24 positive + 25 negative queries on a 12-entry example library |
+| Evaluation | 24 positive + 25 negative queries on a 12-entry example library; contract admission fixture |
 | Latency | ~70 ms p95 for a cold hook process (single-machine sample) |
 | License | MIT © 2026 Messia |
 
@@ -147,6 +147,7 @@ See [docs/security.md](docs/security.md) for the threat model and release checkl
 | Recall@1 / @3 | 91.7% / 100% |
 | Injection@1 / @3 | 75% / 75% |
 | False injection rate | 4.0% |
+| Contract admission eval | 3/3 cases |
 | Avg injection (per query / per injection) | 145 / 194 chars |
 | Hook p95 | ~70 ms (single-machine sample) |
 
@@ -173,7 +174,7 @@ Near-term work is about **contracts, trust, and measurement**, not feature count
 
 - Phase 0 correctness fixes, the first Git baseline, and **Experience Contract v0** are complete;
 - unify **Recall / Explain** around the same candidates, gates, and refusal reasons;
-- build a **Trust & Applicability Evaluation** covering malicious, stale, out-of-scope, conflicting, and quarantined entries;
+- a minimal **contract-admission eval** is in place; expand it into a full **Trust & Applicability Evaluation** covering malicious, stale, out-of-scope, conflicting, and quarantined entries;
 - add real-task evaluation before claiming user benefit.
 
 Later:
