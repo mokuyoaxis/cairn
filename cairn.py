@@ -479,7 +479,7 @@ def cmd_recall(args) -> int:
 
 def cmd_show(args) -> int:
     path = entries_dir() / f"{args.name}.md"
-    if not path.is_file():
+    if not SLUG_RE.match(args.name) or not path.is_file():
         print(f"[FAIL] 没有条目：{args.name}", file=sys.stderr)
         return 1
     _append_log("show", {"slug": args.name})

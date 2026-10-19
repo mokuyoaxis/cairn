@@ -24,7 +24,7 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 | Core | `cairn.py`, 1198 lines, zero third-party dependencies |
 | Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
 | Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, three gates |
-| Tests | 82 unit tests |
+| Tests | 85 unit tests |
 | Evaluation | 24 positive + 25 negative queries on a 12-entry example library; contract admission fixture |
 | Latency | ~70 ms p95 for a cold hook process (single-machine sample) |
 | License | MIT © 2026 Messia |
@@ -141,7 +141,7 @@ See [docs/security.md](docs/security.md) for the threat model and release checkl
 
 | Metric | Value |
 |---|---|
-| Unit tests | 82 passing |
+| Unit tests | 85 passing |
 | Seed library | 12 entries |
 | Evaluation set | 24 positive + 25 negative queries |
 | Recall@1 / @3 | 91.7% / 100% |

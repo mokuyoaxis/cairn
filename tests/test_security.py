@@ -24,6 +24,10 @@ class TestAudit(Base):
     def test_audit_fails_on_empty_library(self):
         self.assertEqual(cairn.main(["audit"]), 1)
 
+    def test_audit_read_error_returns_1(self):
+        (self.home / "entries" / "broken.md").mkdir()
+        self.assertEqual(cairn.main(["audit"]), 1)
+
     def test_audit_detects_secret_in_log(self):
         self.write("clean", body="不要用 docker compose config 校验配置")
         logdir = self.home / "log"

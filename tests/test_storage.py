@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import io
+import sys
 import unittest
 
 from support import Base, cairn
@@ -32,6 +34,19 @@ class TestAddAndLint(Base):
 
     def test_add_requires_summary(self):
         self.assertEqual(cairn.main(["add", "--name", "no-summary", "b"]), 2)
+
+    def test_add_reads_body_from_stdin(self):
+        old_in = sys.stdin
+        sys.stdin = io.StringIO("stdin body\n")
+        try:
+            rc = cairn.main(["add", "--name", "stdin-entry",
+                             "--summary", "s", "-"])
+        finally:
+            sys.stdin = old_in
+        self.assertEqual(rc, 0)
+        e, err = cairn.read_entry(self.home / "entries" / "stdin-entry.md")
+        self.assertIsNone(err)
+        self.assertIn("stdin body", e["body"])
 
     def test_add_refuses_overwrite(self):
         args = ["add", "--name", "dup", "--summary", "x", "b"]

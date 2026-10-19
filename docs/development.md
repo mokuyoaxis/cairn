@@ -6,7 +6,7 @@
 
 ## 0. 摘要
 
-- 82 项单元测试；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + contract eval + audit。
+- 85 项单元测试；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + contract eval + audit。
 - 核心 `cairn.py` 1198 行，零第三方依赖。
 - 单文件核心；控制台/旁路必须独立。
 - Experience Contract v0 已实现；近期优先 Trust & Applicability Eval 与统一 Recall/Explain；控制台暂缓。
@@ -45,7 +45,7 @@ cairn/
     ├── test_contract.py
     ├── test_security.py
     ├── test_eval.py
-    └── test_cli.py        # 共 82 项单元测试
+    └── test_cli.py        # 共 85 项单元测试
 ```
 
 维护者本地材料默认由 ignore 规则排除，不随仓库发布，也不作为公开文档的依据。
@@ -69,7 +69,7 @@ python3 eval/contract_eval.py
 
 当前基线（2026-10-19）：
 
-- 82 项测试全绿；
+- 85 项测试全绿；
 - 12 条示例，lint 通过（全部为 `active + verified + source + verified_at` 的 fixture 条目）；
 - 24+25 评测：召回@1 91.7% / @3 100%，注入@1/@3 75%，误触发 4.0%；
 - 契约准入 eval：3/3 cases（verified 注入；unverified/quarantine/deprecated/archived 沉默）；
@@ -182,7 +182,7 @@ python3 cairn.py lint
 - **Contract admission eval 最小切片**：`eval/contract_eval.py` 覆盖
   verified/unverified/quarantine/deprecated/archived 的准入与正确沉默；
 - **测试按域拆分**：`tests/test_*.py` + `tests/support.py`；补 CLI/eval 覆盖，
-  共 82 项。
+  共 85 项。
 
 剩余：
 

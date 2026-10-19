@@ -47,6 +47,12 @@ class TestCLI(Base):
         rc, _ = self._run(["show", "missing-entry"])
         self.assertEqual(rc, 1)
 
+    def test_show_rejects_path_traversal(self):
+        (self.home / "secret.md").write_text("do not read", encoding="utf-8")
+        rc, out = self._run(["show", "../secret"])
+        self.assertEqual(rc, 1)
+        self.assertNotIn("do not read", out)
+
     def test_prune_links(self):
         self.write("linker", body="关联 [[missing-entry]]")
         self.assertEqual(cairn.main(["prune-links"]), 0)

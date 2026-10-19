@@ -153,7 +153,9 @@ python3 cairn.py ls
 python3 cairn.py ls --md        # 输出自动生成的索引文本
 ```
 
-`show` 打印全文并记一次 `show` 日志；`ls --md` 生成的索引仅供阅读/导出，不是运行时权威索引。
+`show` 打印全文并记一次 `show` 日志；`name` 必须是 kebab-case slug，不能包含
+`/` 或 `..`，因此不会读取 `entries/` 之外的文件。`ls --md` 生成的索引仅供阅读/导出，
+不是运行时权威索引。
 
 ### 4.4 `lint`
 
