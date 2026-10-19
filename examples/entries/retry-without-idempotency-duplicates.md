@@ -5,6 +5,9 @@ kind: lesson
 updated: 2026-10-19
 scope: api, database
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：给写操作加一个由调用方生成的幂等键（订单号、请求 ID），服务端按键去重。

@@ -5,6 +5,9 @@ kind: lesson
 updated: 2026-10-19
 scope: windows, shell
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：所有路径参数一律加引号；传给子进程时用参数数组而不是拼接字符串。

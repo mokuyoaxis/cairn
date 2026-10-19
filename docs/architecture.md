@@ -6,11 +6,11 @@
 
 ## 0. 摘要
 
-- **确定性优先**：中文 2-gram + 英文词元 + BM25 + 三道门；不依赖模型判断。
+- **确定性优先**：中文 2-gram + 英文词元 + BM25 + 契约准入 + 三道门；不依赖模型判断。
 - **卡片优先**：注入 name + summary + path，不默认注入全文。
 - **运行时只读**：不执行条目、不自动写入、不发起网络请求。
 - **存储简单**：Markdown 是唯一权威源；缓存可重建；没有手写索引。
-- **近期重点**：Experience Contract、Trust & Applicability Eval、统一的 Recall/Explain；控制台暂缓。
+- **当前重点**：Experience Contract v0 已实现；接下来是统一的 Recall/Explain 与 Trust & Applicability Eval；控制台暂缓。
 
 ### 0.1 关键决策
 
@@ -54,6 +54,9 @@ Prompt 提取 / 规范化
     |
     v
 本地检索（2-gram + BM25）
+    |
+    v
+Experience Contract 准入（active + verified + source + verified_at）
     |
     v
 三道门（分数 / 覆盖率 / 领先幅度）
@@ -114,9 +117,21 @@ norm = score / Σ idf(query 中在库里真实存在的词)
 
 查询 token 会先去重、按 idf 从高到低排序，并截断到 80 个，控制长 query 成本。
 
-## 6. 三道门
+## 6. 契约准入 + 三道门
 
-默认参数：
+Experience Contract v0 是注入前的硬准入，不参与排序：
+
+| 条件 | 说明 |
+|---|---|
+| `status: active` | deprecated/archived 不自动注入 |
+| `trust: verified` | unverified/quarantined 不自动注入 |
+| `source` 非空 | 来源可追溯 |
+| `verified_at: YYYY-MM-DD` | 有验证时间声明 |
+
+排序结果先过滤掉不满足契约的条目，再应用三道门。契约不满足的条目仍可被
+`recall --raw` / `show` 查看，但不会进入 Hook。`verified` 是自我声明，不是证明。
+
+三道门默认参数：
 
 | 门 | 默认值 | 作用 |
 |---|---|---|
@@ -182,7 +197,7 @@ Cairn 区分两种失败：
 
 ## 11. 约束
 
-- 核心 `cairn.py` ≤1200 行；当前 1200；
+- 核心 `cairn.py` ≤1200 行；当前 1198；
 - 单文件核心；控制台/旁路必须独立模块；
 - 零第三方依赖、默认零网络；
 - Python 3.9+；
@@ -204,7 +219,9 @@ Cairn 区分两种失败：
 - **Prompt-time Recall 是当前默认实现**：用户提问时检索，过门后注入卡片。
 - **Decision-time Recall 是长期方向**：在 Agent 决定下一步之前提供经验；暂不新增 Hook、平台矩阵或新的运行时入口。
 - Recall 与 Explain 必须共用同一套候选、分数、覆盖率、门控与拒绝理由；Explain 不能改变正常 Hook 行为。
-- 参与自动注入的条目必须满足 Experience Contract：来源、适用范围、验证依据、生命周期与信任状态可表达；导入/未验证默认不自动注入。
+- Experience Contract v0 已实现：来源、验证时间、生命周期、信任状态可表达；
+  自动注入要求 `active + verified + source + verified_at`，导入默认 quarantine。
+- Recall 与 Explain 仍需统一为同一候选/门控/拒绝理由；当前 `--raw` 只用于显式调试。
 
 ## 14. 产品边界
 

@@ -21,10 +21,10 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 | Item | Value |
 |---|---|
 | Status | `v0.1.0` Internal Alpha |
-| Core | `cairn.py`, 1200 lines, zero third-party dependencies |
-| Storage | Local Markdown entries; rebuildable cache |
-| Retrieval | Chinese 2-gram + English tokens, BM25, three gates |
-| Tests | 58 unit tests |
+| Core | `cairn.py`, 1198 lines, zero third-party dependencies |
+| Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
+| Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, three gates |
+| Tests | 69 unit tests |
 | Evaluation | 24 positive + 25 negative queries on a 12-entry example library |
 | Latency | ~70 ms p95 for a cold hook process (single-machine sample) |
 | License | MIT © 2026 Messia |
@@ -99,9 +99,10 @@ Cairn returns cards, not documents. If nothing passes the gates, it stays silent
 
 1. **Tokenize.** Chinese is split into 2-grams; English and identifiers are split into words.
 2. **Score.** BM25 with field weights: `summary ×3 > name ×2 > body ×1`. Only query terms that exist in the library contribute to the denominator.
-3. **Gate.** A candidate must pass three independent gates: normalized score, query-term coverage, and a margin over the second candidate.
-4. **Deduplicate.** The same card is injected at most once per session.
-5. **Render.** At most three cards, name + summary + path. Full text is fetched explicitly.
+3. **Admit.** Only entries with `status: active`, `trust: verified`, a non-empty `source`, and a valid `verified_at` may be injected. Imported entries start as `quarantined`.
+4. **Gate.** A candidate must pass three independent gates: normalized score, query-term coverage, and a margin over the second candidate.
+5. **Deduplicate.** The same card is injected at most once per session.
+6. **Render.** At most three cards, name + summary + path. Full text is fetched explicitly.
 
 The runtime is read-only. Retrieval, statistics, and validation make no network calls.
 
@@ -129,6 +130,7 @@ Codex CLI uses `--format codex`; `--format text` is for local testing; `--format
 - **Audit covers managed data.** `cairn audit` scans entries, logs, session files, and the derived cache; samples are masked.
 - **Sanitize has boundaries.** It refuses to write into the source library, refuses to overwrite existing targets by default, and uses atomic writes.
 - **Experience is evidence, not authority.** Entries cannot override system or developer instructions. The host agent remains responsible for permissions, sandboxing, and approval of dangerous actions.
+- **Trust is explicit.** Automatic injection requires `active + verified + source + verified_at`; imported entries are `quarantined` until reviewed. `verified` is a self-declared state, not a signature.
 - **No claim of solving prompt injection.** Cairn reduces the content surface; it does not replace the host's security boundary.
 
 See [docs/security.md](docs/security.md) for the threat model and release checklist.
@@ -139,7 +141,7 @@ See [docs/security.md](docs/security.md) for the threat model and release checkl
 
 | Metric | Value |
 |---|---|
-| Unit tests | 58 passing |
+| Unit tests | 69 passing |
 | Seed library | 12 entries |
 | Evaluation set | 24 positive + 25 negative queries |
 | Recall@1 / @3 | 91.7% / 100% |
@@ -158,7 +160,7 @@ Known limitations:
 - 2-gram tokenization is coarse for very short queries;
 - there is no capture loop; `add` is manual;
 - `import` normalizes file names to kebab-case and runs `lint`, but only parses top-level scalar frontmatter (not nested YAML);
-- an explicit trust/quarantine contract is a near-term deliverable, not shipped yet;
+- Experience Contract v0 is metadata, not cryptographic proof; `scope` is not yet used for admission, `verified_at` does not expire automatically, and conflict detection is not implemented;
 - technical documentation is currently in Simplified Chinese.
 
 Injection length is reported both per query (a no-hit query counts as zero) and per actual injection. It is a diagnostic, not a cost guarantee; see [docs/evaluation.md](docs/evaluation.md).
@@ -169,8 +171,7 @@ Injection length is reported both per query (a no-hit query counts as zero) and 
 
 Near-term work is about **contracts, trust, and measurement**, not feature count:
 
-- Phase 0 correctness fixes and the first Git baseline are complete;
-- define **Experience Contract v0** (source, verification, lifecycle, applicability, admission);
+- Phase 0 correctness fixes, the first Git baseline, and **Experience Contract v0** are complete;
 - unify **Recall / Explain** around the same candidates, gates, and refusal reasons;
 - build a **Trust & Applicability Evaluation** covering malicious, stale, out-of-scope, conflicting, and quarantined entries;
 - add real-task evaluation before claiming user benefit.

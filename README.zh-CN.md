@@ -21,10 +21,10 @@ Cairn 是一个本地优先、确定性的 **Experience Retrieval Layer（经验
 | 项目 | 内容 |
 |---|---|
 | 状态 | `v0.1.0` Internal Alpha |
-| 核心 | `cairn.py`，1200 行，零第三方依赖 |
-| 存储 | 本地 Markdown 条目；缓存可重建 |
-| 检索 | 中文 2-gram + 英文词元，BM25，三道门 |
-| 测试 | 58 项单元测试 |
+| 核心 | `cairn.py`，1198 行，零第三方依赖 |
+| 存储 | 带 Experience Contract v0 元数据的本地 Markdown 条目；缓存可重建 |
+| 检索 | 中文 2-gram + 英文词元，BM25，契约准入 + 三道门 |
+| 测试 | 69 项单元测试 |
 | 评测 | 12 条示例库上的 24 条正例 + 25 条负例 |
 | 延迟 | 冷启动 hook p95 约 70ms（单机样本） |
 | 许可证 | MIT © 2026 Messia |
@@ -99,9 +99,10 @@ Cairn 返回卡片，不返回整篇文档。没有条目过门时，它保持�
 
 1. **切词**：中文按 2-gram；英文和标识符按词。
 2. **打分**：BM25，字段加权 `summary ×3 > name ×2 > body ×1`；分母只算库内真实存在的 query 词。
-3. **过门**：候选必须通过三道独立门：归一化分数、query 词覆盖率、相对第二名的领先幅度。
-4. **去抖**：同一会话同一张卡片最多注入一次。
-5. **渲染**：最多三张卡片，名字 + summary + 路径；全文按需显式读取。
+3. **准入**：只有 `status: active`、`trust: verified`、`source` 非空且 `verified_at` 有效的条目才可能被注入；导入条目默认 `quarantined`。
+4. **过门**：候选必须通过三道独立门：归一化分数、query 词覆盖率、相对第二名的领先幅度。
+5. **去抖**：同一会话同一张卡片最多注入一次。
+6. **渲染**：最多三张卡片，名字 + summary + 路径；全文按需显式读取。
 
 运行时只读；检索、统计与校验不发起网络请求。
 
@@ -129,6 +130,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 - **audit 覆盖受管数据**：`cairn audit` 扫描 entries、日志、会话文件与派生缓存；输出只显示脱敏样本。
 - **sanitize 有边界**：拒绝写入源库，默认不覆盖已有目标，使用原子写入。
 - **经验是证据，不是指令权威**：条目不能覆盖系统/开发者指令；权限、沙箱和危险操作审批仍由宿主 Agent 负责。
+- **信任需要显式声明**：自动注入要求 `active + verified + source + verified_at`；导入条目默认 `quarantined`，复核后才可提升。`verified` 是自我声明，不是签名。
 - **不宣称解决 Prompt Injection**：Cairn 减少内容面，但不替代宿主安全边界。
 
 威胁模型与发布检查见 [docs/security.md](docs/security.md)。
@@ -139,7 +141,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 | 指标 | 数值 |
 |---|---|
-| 单元测试 | 58 项通过 |
+| 单元测试 | 69 项通过 |
 | 示例库 | 12 条 |
 | 评测集 | 24 条正例 + 25 条负例 |
 | 召回@1 / @3 | 91.7% / 100% |
@@ -158,7 +160,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 - 2-gram 对很短 query 较粗；
 - 没有捕获闭环；`add` 是手动的；
 - `import` 会把文件名归一为 kebab-case 并自动跑 `lint`，但只解析顶层标量 frontmatter，不解析嵌套 YAML；
-- 显式的 trust/quarantine 契约是近期交付项，尚未 ship；
+- Experience Contract v0 是元数据，不是加密证明；`scope` 尚未参与准入，`verified_at` 不会自动过期，冲突检测未实现；
 - 技术文档目前为简体中文。
 
 平均注入长度同时按「每 query（未注入计 0）」与「每次实际注入」报告。它是诊断指标，不是成本承诺；详见 [docs/evaluation.md](docs/evaluation.md)。
@@ -169,8 +171,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 近期重点是**契约、信任与度量**，不是功能数量：
 
-- Phase 0 正确性修复与首个 Git 基线已完成；
-- 定义 **Experience Contract v0**（source、verification、lifecycle、applicability、admission）；
+- Phase 0 正确性修复、首个 Git 基线与 **Experience Contract v0** 已完成；
 - 统一 **Recall / Explain** 的候选、门控与拒绝理由；
 - 建立 **Trust & Applicability Evaluation**，覆盖恶意、过期、scope 不匹配、冲突与 quarantine 条目；
 - 在声称用户收益前，先做真实任务评测。

@@ -26,20 +26,18 @@ from pathlib import Path
 
 VERSION = "0.1.0"
 
+
 # ── 路径 ────────────────────────────────────────────────────────────────
 HOME = Path(os.environ.get("CAIRN_HOME") or (Path.home() / ".cairn")).expanduser()
 ENTRIES = HOME / "entries"
 LOGDIR = HOME / "log"
 
-
 def data_home() -> Path:
     """运行期再取一次，方便测试里改环境变量。"""
     return Path(os.environ.get("CAIRN_HOME") or (Path.home() / ".cairn")).expanduser()
 
-
 def entries_dir() -> Path:
     return data_home() / "entries"
-
 
 def log_dir() -> Path:
     return data_home() / "log"
@@ -47,9 +45,10 @@ def log_dir() -> Path:
 
 # ── 词表 / 常量 ─────────────────────────────────────────────────────────
 KINDS = ("lesson", "method")
+STATUSES = ("active", "deprecated", "archived")
+TRUSTS = ("verified", "unverified", "quarantined")
 REQUIRED = ("name", "summary", "kind", "updated")
-OPTIONAL = ("scope", "source")
-
+OPTIONAL = ("scope", "source", "status", "trust", "verified_at", "evidence")
 
 # 低信息量的 2-gram：不参与打分，否则「这个/可以」把所有条目拉成同分
 STOP2 = frozenset("""
@@ -113,7 +112,6 @@ def split_frontmatter(text: str):
             fm[mm.group(1)] = mm.group(2).strip().strip('"').strip("'")
     return fm, text[m.end():], None
 
-
 def read_entry(path: Path):
     """返回 (entry_dict, error)。任何异常都转成 error 字符串，不抛。"""
     try:
@@ -137,9 +135,11 @@ def read_entry(path: Path):
         "kind": fm.get("kind", "").strip(),
         "scope": fm.get("scope", "").strip(),
         "source": fm.get("source", "").strip(),
+        "status": (fm.get("status") or "active").strip(),
+        "trust": (fm.get("trust") or "unverified").strip(),
+        "verified_at": fm.get("verified_at", "").strip(),
         "updated": fm.get("updated", "").strip(),
     }, None
-
 
 def load_entries():
     """返回 (entries, errors)。errors = [(filename, message)]。"""
@@ -172,6 +172,8 @@ class Index:
             self.docs.append({
                 "name": e["name"], "path": e["path"],
                 "summary": e["summary"], "kind": e["kind"],
+                "status": e["status"], "trust": e["trust"],
+                "verified_at": e["verified_at"], "source": e["source"],
                 "n": n, "d": desc, "b": body,
                 "len": len(n) + len(desc) + len(body),
             })
@@ -226,19 +228,18 @@ class Index:
         results.sort(key=lambda x: (-x[0], x[4]["name"]))
         return results[:limit]
 
-
 _INDEX = None
-
 
 def _to_plain(idx: "Index") -> dict:
     """Counter → 普通 dict。pickle 反序列化 Counter 慢 4 倍（实测 109ms vs 26ms）。"""
     return {
         "docs": [{"name": d["name"], "path": d["path"], "summary": d["summary"],
-                  "kind": d["kind"], "n": dict(d["n"]), "d": dict(d["d"]),
+                  "kind": d["kind"], "status": d["status"], "trust": d["trust"],
+                  "verified_at": d["verified_at"], "source": d["source"],
+                  "n": dict(d["n"]), "d": dict(d["d"]),
                   "b": dict(d["b"]), "len": d["len"]} for d in idx.docs],
         "idf": dict(idx.idf), "avgdl": idx.avgdl, "n_docs": idx.n_docs,
     }
-
 
 def _from_plain(data: dict) -> "Index":
     idx = Index.__new__(Index)
@@ -247,7 +248,6 @@ def _from_plain(data: dict) -> "Index":
     idx.avgdl = data["avgdl"]
     idx.n_docs = data["n_docs"]
     return idx
-
 
 def _file_sig():
     """(文件名, mtime_ns, size) 列表：索引缓存的有效性判据。"""
@@ -263,10 +263,8 @@ def _file_sig():
             continue
     return sig
 
-
 def _cache_file() -> Path:
     return data_home() / "cache" / "index.pkl"
-
 
 def get_index(force: bool = False) -> Index:
     """优先读缓存：217 条时建索引约 100ms、读缓存约 20ms。
@@ -283,7 +281,7 @@ def get_index(force: bool = False) -> Index:
         try:
             with open(cache, "rb") as fh:
                 blob = pickle.load(fh)
-            if blob.get("sig") == sig:
+            if blob.get("sig") == sig and all("trust" in d for d in blob["data"]["docs"]):
                 _INDEX = _from_plain(blob["data"])
                 return _INDEX
         except Exception:
@@ -307,10 +305,8 @@ def get_index(force: bool = False) -> Index:
 # 调试预览必须显式开启，且仍然经过脱敏。
 LOG_DENY_KEYS = frozenset({"query", "prompt", "note", "content", "text", "message"})
 
-
 def _fingerprint(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()[:12]
-
 
 def _redact(text: str) -> str:
     """对任意文本套用脱敏规则；sanitize / 日志预览 / stats 共用。"""
@@ -318,19 +314,16 @@ def _redact(text: str) -> str:
         text = pat.sub(repl, text)
     return text
 
-
 def _mask_sample(value) -> str:
     """审计输出不回显完整敏感值；先脱敏，再对长样本做首尾遮蔽。"""
     text = _redact(str(value))
     return text if len(text) <= 24 else text[:10] + "…" + text[-6:]
-
 
 def _text_log_fields(prefix: str, text: str) -> dict:
     fields = {f"{prefix}_sha256": _fingerprint(text), f"{prefix}_len": len(text)}
     if os.environ.get("CAIRN_LOG_QUERY_PREVIEW", "").strip() == "1":
         fields[f"{prefix}_preview"] = _redact(text.replace("\n", " "))[:120]
     return fields
-
 
 def _safe_log_value(value):
     if isinstance(value, str):
@@ -343,7 +336,6 @@ def _safe_log_value(value):
         return {str(k): _safe_log_value(v) for k, v in value.items()
                 if str(k).lower() not in LOG_DENY_KEYS}
     return str(value)[:300]
-
 
 def _append_log(kind: str, payload: dict) -> None:
     try:
@@ -361,11 +353,9 @@ def _append_log(kind: str, payload: dict) -> None:
     except Exception:
         pass  # 日志失败绝不能拖挂 hook
 
-
 def _session_file(sid: str) -> Path:
     safe = re.sub(r"[^A-Za-z0-9_.-]", "_", sid)[:64] or "default"
     return log_dir() / f"session-{safe}.json"
-
 
 def _load_seen(sid: str) -> set:
     f = _session_file(sid)
@@ -376,7 +366,6 @@ def _load_seen(sid: str) -> set:
         return set(data.get("seen", []))
     except Exception:
         return set()
-
 
 def _save_seen(sid: str, seen: set) -> None:
     try:
@@ -403,17 +392,23 @@ def render_cards(hits, max_chars: int = MAX_CARD_CHARS) -> str:
     lines.append("需要全文用 `cairn show <name>`；都不相关就忽略本提示。")
     return "\n".join(lines)
 
+def is_injectable(doc) -> bool:
+    """Contract v0: active + verified + source + verified_at."""
+    return (doc.get("status") == "active" and doc.get("trust") == "verified"
+            and bool(doc.get("source"))
+            and bool(DATE_RE.match(doc.get("verified_at") or "")))
 
 def gate(results, min_score: float = DEFAULT_MIN_SCORE,
          min_cover: float = DEFAULT_MIN_COVER,
          min_margin: float = DEFAULT_MIN_MARGIN,
          max_cards: int = MAX_CARDS, q_len: int = 0):
-    """三道门：归一化分数、query 词覆盖率、领先幅度。
+    """契约准入 + 三道门：归一化分数、query 词覆盖率、领先幅度。
 
     - 覆盖率 = 命中词数 / query 词数：挡住「只撞上一个泛词」的条目；
     - 领先幅度 = 第一名分数 / 第二名：第一名不明显的场景（两个条目都像）宁可不注入。
     三道门都作用在排序结果上，不依赖库的规模，所以 12 条和 1000 条用同一组参数。
     """
+    results = [r for r in results if is_injectable(r[4])]
     if not results:
         return []
     q_len = max(q_len or 1, 1)
@@ -432,7 +427,6 @@ def gate(results, min_score: float = DEFAULT_MIN_SCORE,
             break
     return out
 
-
 def emit(text: str, fmt: str) -> None:
     if fmt == "claude":
         payload = {"hookSpecificOutput": {
@@ -445,7 +439,6 @@ def emit(text: str, fmt: str) -> None:
     else:
         sys.stdout.write(text + "\n")
     sys.stdout.flush()
-
 
 def extract_prompt(data) -> str:
     """从平台 stdin 里挖出用户 prompt，兼容几种常见嵌套。"""
@@ -471,18 +464,18 @@ def cmd_recall(args) -> int:
     results = idx.search(args.query, limit=args.limit)
     if args.raw:
         for norm, score, matched, d_matched, doc in results[:args.limit]:
-            print(f"norm={norm:.2f} m={matched}/desc={d_matched}  {doc['name']}  —  {doc['summary'][:70]}")
+            print(f"norm={norm:.2f} m={matched}/desc={d_matched}  {doc['name']}  "
+                  f"[{doc.get('status')}/{doc.get('trust')}]  —  {doc['summary'][:70]}")
         if not results:
             print("[无结果]")
         return 0
     hits = gate(results, args.min_score, args.min_cover, args.min_margin,
                 max_cards=args.limit, q_len=len(tokenize(args.query)))
     if not hits:
-        print("[无相关条目]")
+        print("[无相关条目]" + ("（有候选但未通过契约/门控；用 --raw 查看）" if results else ""))
         return 1
     print(render_cards(hits))
     return 0
-
 
 def cmd_show(args) -> int:
     path = entries_dir() / f"{args.name}.md"
@@ -492,7 +485,6 @@ def cmd_show(args) -> int:
     _append_log("show", {"slug": args.name})
     sys.stdout.write(path.read_text(encoding="utf-8"))
     return 0
-
 
 def cmd_add(args) -> int:
     name = args.name or ""
@@ -513,6 +505,12 @@ def cmd_add(args) -> int:
     if not body:
         print("[FAIL] 正文为空（用位置参数或 stdin 传入）", file=sys.stderr)
         return 2
+    if args.trust == "verified" and not (args.source and args.source.strip()
+                                         and args.verified_at
+                                         and DATE_RE.match(args.verified_at)):
+        print("[FAIL] trust=verified 需要 --source 与 --verified-at YYYY-MM-DD",
+              file=sys.stderr)
+        return 2
 
     d = entries_dir()
     d.mkdir(parents=True, exist_ok=True)
@@ -522,11 +520,14 @@ def cmd_add(args) -> int:
         return 1
     today = date.today().isoformat()
     fm = {"name": name, "summary": args.summary.strip(),
-          "kind": args.kind, "updated": args.updated or today}
+          "kind": args.kind, "updated": args.updated or today,
+          "status": args.status, "trust": args.trust}
     if args.scope:
         fm["scope"] = args.scope.strip()
     if args.source:
         fm["source"] = args.source.strip()
+    if args.verified_at:
+        fm["verified_at"] = args.verified_at
     text = "---\n" + "\n".join(f"{k}: {v}" for k, v in fm.items()) + "\n---\n\n" + body + "\n"
     path.write_text(text, encoding="utf-8")
     global _INDEX
@@ -542,7 +543,6 @@ def cmd_add(args) -> int:
     for msg in warnings:
         print("  [WARN] " + msg)
     return 1 if problems else 0
-
 
 def cmd_ls(args) -> int:
     entries, errors = load_entries()
@@ -566,7 +566,6 @@ def cmd_ls(args) -> int:
         print(f"\n[WARN] {len(errors)} 个文件读不出（跑 cairn lint 看详情）")
     return 0
 
-
 def check_entry(e, filename: str):
     """单条目检查，返回 (errors, warnings)。warnings 不影响退出码。"""
     problems, warnings = [], []
@@ -583,6 +582,16 @@ def check_entry(e, filename: str):
         problems.append(f"kind='{e['kind']}' 不在 {list(KINDS)}")
     if e["updated"] and not DATE_RE.match(e["updated"]):
         problems.append(f"updated='{e['updated']}' 不是 YYYY-MM-DD")
+    if e["status"] not in STATUSES:
+        problems.append(f"status='{e['status']}' 不在 {list(STATUSES)}")
+    if e["trust"] not in TRUSTS:
+        problems.append(f"trust='{e['trust']}' 不在 {list(TRUSTS)}")
+    if e["verified_at"] and not DATE_RE.match(e["verified_at"]):
+        problems.append(f"verified_at='{e['verified_at']}' 不是 YYYY-MM-DD")
+    if e["trust"] == "verified" and not (e["source"] and DATE_RE.match(e["verified_at"])):
+        problems.append("trust=verified 需要 source 与有效 verified_at")
+    if not is_injectable(e):
+        warnings.append("不会自动注入（需 active+verified+source+verified_at）")
     if len(e["summary"]) > 200:
         warnings.append(f"summary 过长（{len(e['summary'])} > 200 字符）")
     if len(e["body"].splitlines()) > 80:
@@ -591,7 +600,6 @@ def check_entry(e, filename: str):
     if extra:
         warnings.append(f"未知字段 {extra}（会被忽略）")
     return problems, warnings
-
 
 def cmd_lint(args) -> int:
     entries, read_errors = load_entries()
@@ -637,19 +645,17 @@ def cmd_lint(args) -> int:
         print("  [warn] " + w)
     return 0
 
-
 def _slugify(stem: str) -> str:
     """文件名 → kebab-case；纯非 ASCII 时退化为稳定哈希后缀。"""
     slug = re.sub(r"[^a-z0-9]+", "-", stem.lower()).strip("-")
     return slug or "entry-" + hashlib.sha1(stem.encode("utf-8")).hexdigest()[:8]
-
 
 def cmd_import(args) -> int:
     """把任意 markdown 条目目录导入成本库格式。
 
     只认 frontmatter；summary|description → summary，kind|type → kind
     （pitfall→lesson，tool/workflow→method），updated|verified/date、scope|topic 同理。
-    文件名归一为 kebab-case；导入后自动跑 lint，避免留下脏库。
+    文件名归一为 kebab-case；导入默认 quarantine 并自动跑 lint，避免留下脏库。
     """
     src = Path(args.src).expanduser()
     if not src.is_dir():
@@ -696,7 +702,8 @@ def cmd_import(args) -> int:
             print(f"[DRY] {path.name} → {slug}.md")
             took += 1
             continue
-        out = {"name": slug, "summary": summary, "kind": kind, "updated": updated}
+        out = {"name": slug, "summary": summary, "kind": kind, "updated": updated,
+               "status": "active", "trust": "quarantined"}
         if scope:
             out["scope"] = scope
         if fm.get("source"):
@@ -716,7 +723,6 @@ def cmd_import(args) -> int:
         if len(skipped) > 15:
             print(f"  … 另有 {len(skipped) - 15} 条")
     return 0 if args.dry_run else cmd_lint(args)
-
 
 def cmd_prune_links(args) -> int:
     """导入时剔除了部分条目后，把指向它们的 [[双链]] 去掉。
@@ -742,7 +748,6 @@ def cmd_prune_links(args) -> int:
     print(f"[OK] 清理了 {changed} 个文件的死链")
     return 0
 
-
 def cmd_hook(args) -> int:
     try:
         raw = sys.stdin.read()
@@ -760,9 +765,11 @@ def cmd_hook(args) -> int:
     results = idx.search(prompt, limit=20)
     hits = [h for h in gate(results, args.min_score, args.min_cover, args.min_margin,
                             q_len=len(tokenize(prompt))) if h[4]["name"] not in seen]
+    reason = ("ineligible" if results and not any(is_injectable(r[4]) for r in results)
+              else "below_gate")
     if not hits:
         if results:
-            _append_log("miss", {"reason": "below_gate", "session": session,
+            _append_log("miss", {"reason": reason, "session": session,
                                  "top": results[0][4]["name"], "norm": round(results[0][0], 3),
                                  **qlog})
         else:
@@ -777,7 +784,6 @@ def cmd_hook(args) -> int:
     emit(render_cards(hits), args.format)
     return 0
 
-
 def cmd_feedback(args) -> int:
     note = (args.note or "").strip()
     payload = {"slug": args.name, "signal": args.signal}
@@ -786,7 +792,6 @@ def cmd_feedback(args) -> int:
     _append_log("feedback", payload)
     print(f"[OK] 已记录 {args.name}: {args.signal}")
     return 0
-
 
 # 审计规则：(名称, 正则, 级别, 说明)
 _AUDIT = (
@@ -802,7 +807,6 @@ _AUDIT = (
      "medium", "内网 IP"),
     ("business-figure", r"\b\d{1,3}(?:,\d{3}){2,}\b|\d+\.\d+\s*亿", "medium", "业务数字"),
 )
-
 
 _REDACT = (
     (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
@@ -820,7 +824,6 @@ _REDACT = (
     (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"), "<email>"),
 )
 
-
 def _atomic_write_text(path: Path, text: str) -> None:
     """先写同目录临时文件，再原子替换；失败不留下半截目标文件。"""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -836,7 +839,6 @@ def _atomic_write_text(path: Path, text: str) -> None:
                 os.unlink(tmp_name)
             except OSError:
                 pass
-
 
 def cmd_sanitize(args) -> int:
     """把库复制一份并替换可识别信息，原库一个字节都不动。
@@ -901,7 +903,6 @@ def cmd_sanitize(args) -> int:
     print(f"     原库未改动；下一步：CAIRN_HOME={out} cairn audit")
     return 0
 
-
 def _audit_files():
     """Cairn 管理的持久化数据：entries + log/session + 派生 cache。"""
     d, ld = entries_dir(), log_dir()
@@ -911,7 +912,6 @@ def _audit_files():
                   if p.is_file() and p.suffix in (".jsonl", ".json")]
     cache = data_home() / "cache" / "index.pkl"
     return files + ([("cache/index.pkl", cache)] if cache.is_file() else [])
-
 
 def cmd_audit(args) -> int:
     """脱敏体检：按级别扫凭据 / 邮箱 / 路径 / 业务数字。
@@ -966,7 +966,6 @@ def cmd_audit(args) -> int:
     print("[WARN] 仅 medium（内网 IP/业务数字），自行判断是否公开")
     return 0
 
-
 def cmd_nudge(args) -> int:
     """Stop 钩子用：会话收尾提醒一次，不判断该不该沉淀。
 
@@ -977,7 +976,6 @@ def cmd_nudge(args) -> int:
             "已经写过的忽略本提示。")
     emit(text, args.format)
     return 0
-
 
 def cmd_stats(args) -> int:
     d = log_dir()
@@ -1026,7 +1024,6 @@ def cmd_stats(args) -> int:
                 line += f"  |  {previews[fp]}"
             print(line)
     return 0
-
 
 def cmd_eval(args) -> int:
     """回归闸门。同时报两个口径，别用一个数字糊弄自己：
@@ -1118,6 +1115,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--kind", default="lesson", choices=KINDS)
     s.add_argument("--scope")
     s.add_argument("--source")
+    s.add_argument("--status", choices=STATUSES, default="active")
+    s.add_argument("--trust", choices=TRUSTS, default="unverified")
+    s.add_argument("--verified-at")
     s.add_argument("--updated")
     s.add_argument("--force", action="store_true")
     s.set_defaults(func=cmd_add)
@@ -1182,7 +1182,6 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_stats)
     return p
 
-
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -1194,7 +1193,6 @@ def main(argv=None) -> int:
             return 0
         print(f"[FAIL] {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

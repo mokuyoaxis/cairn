@@ -5,6 +5,9 @@ kind: lesson
 updated: 2026-10-19
 scope: container, shell
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：给 `docker exec` 加 `-i`，否则 heredoc / 管道输入不会被送进容器。

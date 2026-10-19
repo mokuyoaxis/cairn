@@ -64,7 +64,7 @@ CAIRN_HOME=./examples python3 cairn.py recall "compose 密钥"
 
 ## 3. 条目格式
 
-一条经验一个 Markdown 文件，frontmatter 四个必填、两个可选：
+一条经验一个 Markdown 文件，四个基础必填字段 + Experience Contract v0 字段：
 
 ```markdown
 ---
@@ -73,7 +73,11 @@ summary: docker compose config 会把 env_file 里的密钥展开成明文   # �
 kind: lesson                              # 必填：lesson（教训）| method（方法）
 updated: 2026-10-19                       # 必填，最近一次确认
 scope: docker, security                   # 可选，适用范围
-source: 某次线上排查                        # 可选
+source: 某次线上排查                        # 可选；trust=verified 时必填
+status: active                            # 可选：active | deprecated | archived，默认 active
+trust: verified                           # 可选：verified | unverified | quarantined，默认 unverified
+verified_at: 2026-10-19                   # trust=verified 时必填，YYYY-MM-DD
+evidence: docs/incidents/2026-10-19.md    # 可选，验证依据
 ---
 
 **做法**：直接说怎么做。
@@ -88,6 +92,23 @@ source: 某次线上排查                        # 可选
 - 一事实一文件，正文建议 ≤80 行；
 - 只对某个平台/版本成立的结论，在 `summary` 里点名（例：`【仅 Windows】`）；
 - 双链使用 `[[条目名]]`，`lint` 会检查死链。
+
+### 3.1 Experience Contract v0 准入规则
+
+自动注入必须同时满足：
+
+1. `status: active`；
+2. `trust: verified`；
+3. `source` 非空；
+4. `verified_at` 是 `YYYY-MM-DD`。
+
+不满足条件的条目仍可用 `recall --raw` 或 `show` 查看，但不会进入 Hook 上下文。
+`trust: verified` 是**条目声明的验证状态**，不是加密证明，也不等于跨项目适用；
+人工写入/批准不等于技术验证。导入的条目默认 `trust: quarantined`，需要人工复核后
+显式改为 `verified`。
+
+旧库/旧条目如果没有这些字段，按 `active + unverified` 处理：升级后会**停止自动注入**，
+需要逐条复核并补 `source`、`trust: verified`、`verified_at`。
 
 ## 4. 命令
 
@@ -105,9 +126,11 @@ python3 cairn.py add \
 - `--name` 省略时，用 summary 的 SHA-1 生成 `entry-xxxxxxxx`；
 - `--summary` 必填；
 - `--kind` 只能是 `lesson` 或 `method`，默认 `lesson`；
+- `--status` 默认 `active`；`--trust` 默认 `unverified`；`--verified-at` 接受 `YYYY-MM-DD`；
+- `--trust verified` 必须同时提供 `--source` 与有效 `--verified-at`，否则返回 2；
 - 正文可以用位置参数、`-` 或管道传入；
 - 目标已存在时拒绝覆盖，`--force` 显式覆盖；
-- 写入后立刻自检；有 ERROR 时返回非零。
+- 写入后立刻自检；有 ERROR 时返回非零；未验证条目会打印“不会自动注入”警告。
 
 ### 4.2 `recall`
 
@@ -117,8 +140,9 @@ python3 cairn.py recall "..." --raw          # 看原始分数与命中词数
 python3 cairn.py recall "..." --limit 3      # 最多几张卡片
 ```
 
+- 默认只返回通过 Experience Contract 与三道门的可注入条目；
 - 没有条目过门时输出 `[无相关条目]`，退出码 1；
-- `--raw` 绕过门控，只用于调试；
+- `--raw` 绕过契约与门控，显示所有候选、分数及 `[status/trust]`，用于调试和复核；
 - `--min-score` / `--min-cover` / `--min-margin` 可临时调整三道门。
 
 ### 4.3 `show` / `ls`
@@ -137,7 +161,9 @@ python3 cairn.py ls --md        # 输出自动生成的索引文本
 python3 cairn.py lint
 ```
 
-检查：必填字段、kebab-case、name↔文件名、kind、日期、双链死链、重名、NUL。发现问题返回 1。
+检查：必填字段、kebab-case、name↔文件名、kind、日期、`status`/`trust` 枚举、
+`verified_at` 格式、`trust=verified` 的 source/日期要求、双链死链、重名、NUL。
+发现问题返回 1；可注入性不足只产生 `[warn]`，不阻断。
 
 空库或错误的 `CAIRN_HOME` 会输出 `[FAIL] 0 条` 并返回 1，不再给出虚假 PASS；排查时同时确认 `ls` 与 `CAIRN_HOME`。
 
@@ -159,7 +185,7 @@ python3 cairn.py prune-links
 - `date/verified` → `updated`
 - `topic` → `scope`
 
-文件名会自动归一为 kebab-case（如 `Bad Name.md` → `bad-name.md`）；纯非 ASCII 文件名会退化为 `entry-<hash>`，避免空 slug。非法日期会被跳过并列入 `[SKIP]`。写入后自动跑 `lint`，返回码反映校验结果。`prune-links` 用于删除指向不存在条目的 `[[双链]]`。
+文件名会自动归一为 kebab-case（如 `Bad Name.md` → `bad-name.md`）；纯非 ASCII 文件名会退化为 `entry-<hash>`，避免空 slug。非法日期会被跳过并列入 `[SKIP]`。所有导入条目统一写为 `status: active`、`trust: quarantined`，不复制来源里的 `trust/verified_at`；复核后再手工改为 `verified`。写入后自动跑 `lint`，返回码反映校验结果。`prune-links` 用于删除指向不存在条目的 `[[双链]]`。
 
 ### 4.6 `hook`
 
@@ -173,8 +199,9 @@ python3 cairn.py hook --format json
 - stdin：JSON；会从 `prompt` / `user_prompt` / `userPrompt` / `message` / `content` / `text` 等字段提取；
 - stdout：对应平台的 JSON；
 - 需要摘要时从 stdin 的 `session_id` 或 `CAIRN_SESSION` 取会话标识；
+- 只有 `active + verified + source + verified_at` 的条目可能被注入；契约不满足时保持沉默；
 - 任何异常都静默返回 0，不阻塞宿主会话；无命中/已去抖时不输出正文；
-- Hook 日志默认不保存原始 prompt，只记指纹、长度、命中条目和门控原因。
+- Hook 日志默认不保存原始 prompt，只记指纹、长度、命中条目和门控原因（含 `ineligible`）。
 
 ### 4.7 `eval`
 
@@ -185,7 +212,10 @@ CAIRN_HOME=./examples python3 cairn.py eval --queries eval/queries.jsonl --negat
 
 退出码：0 过门槛；1 未过；2 参数/评测集错误。默认门槛：注入@3 ≥70%，误触发 ≤10%。
 
-`--min-score` / `--min-cover` / `--min-margin` 会同时作用于正例与负例门控。平均注入会分别报告「每 query（未注入计 0）」与「每次实际注入」，口径见 [evaluation.md](evaluation.md)。
+`--min-score` / `--min-cover` / `--min-margin` 会同时作用于正例与负例门控。
+注入指标只统计通过 Experience Contract 的条目；召回指标仍基于全部候选，因此
+两者差距可能同时来自门控与契约。平均注入会分别报告「每 query（未注入计 0）」与
+「每次实际注入」，口径见 [evaluation.md](evaluation.md)。
 
 ### 4.8 `audit` / `sanitize`
 
@@ -273,16 +303,24 @@ python3 /path/to/cairn/cairn.py hook --format codex <<<'{"prompt":"...","session
 
 ## 8. 排障
 
-**`[无相关条目]` 是正常的。**  
-说明没有条目过门控；可用 `--raw` 看候选与分数，或检查条目 `summary` 是否覆盖了用户会用的说法。不要为了“有输出”盲目降低阈值。
+**`[无相关条目]` 是正常的。**
 
-**Hook 没有输出。**  
-依次检查：`CAIRN_HOME` 是否指向正确的库；库是否为空；是否无命中；是否同一会话已去抖。Hook 无输出时退出码仍是 0，这是非阻塞设计。
+说明没有条目同时通过契约与门控；可用 `--raw` 看候选、分数与 `[status/trust]`，或检查 `summary` 是否覆盖了用户会用的说法。不要为了“有输出”盲目降低阈值或伪造 `verified`。
 
-**`lint`/`audit` 显示 `0 条` 并 FAIL。**  
+**Hook 没有输出。**
+
+依次检查：`CAIRN_HOME` 是否指向正确的库；库是否为空；是否无命中；条目是否满足 `active + verified + source + verified_at`；是否同一会话已去抖。Hook 无输出时退出码仍是 0，这是非阻塞设计。
+
+**有条目命中了，但仍不注入。**
+
+先跑 `lint` 看 `[warn] 不会自动注入`，再跑 `recall "..." --raw` 看 `[status/trust]`。补 `source`、`verified_at`，并把 `trust` 改为 `verified`；导入条目默认是 `quarantined`。不要直接把 `trust` 改成 `verified` 而不做复核。
+
+**`lint`/`audit` 显示 `0 条` 并 FAIL。**
+
 说明 `CAIRN_HOME` 指向了空目录或错误路径；先 `ls` 确认条目数与 `CAIRN_HOME`，再跑 `eval`。
 
-**`sanitize` 报“输出目录不能等于或位于 entries/ 内”。**  
+**`sanitize` 报“输出目录不能等于或位于 entries/ 内”。**
+
 换一个库外的空目录；它不会原地修改源库。
 
 **`sanitize` 报“目标已存在”。**  

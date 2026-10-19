@@ -5,6 +5,9 @@ kind: lesson
 updated: 2026-10-19
 scope: sqlite
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：拷贝数据库前执行 `PRAGMA wal_checkpoint(TRUNCATE)` 并关闭连接，

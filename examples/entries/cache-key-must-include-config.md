@@ -5,6 +5,9 @@ kind: lesson
 updated: 2026-10-19
 scope: ci, build
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：把配置文件的哈希并进缓存键；配置变了键就变。

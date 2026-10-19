@@ -5,6 +5,9 @@ kind: method
 updated: 2026-10-19
 scope: toolchain
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：镜像、CLI、依赖都写明确版本；升级用独立提交，不要跟业务改动混在一起。

@@ -5,6 +5,9 @@ kind: lesson
 updated: 2026-10-19
 scope: ci
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：判定"真的跑了"要同时看三样：job 状态、日志行数、产物时间戳。

@@ -15,8 +15,8 @@ Cairn 是一个**本地工具**，不是安全边界本身。本文描述它已�
 | 日志不落原始 prompt/session | 已实现 |
 | audit 覆盖 entries/log/session/cache | 已实现 |
 | sanitize 拒绝写源库/默认不覆盖 | 已实现 |
-| 导入/未验证条目 quarantine | 近期目标，尚未 ship |
-| 显式 trust/verified_at/status 契约 | 近期目标，尚未 ship |
+| 导入/未验证条目 quarantine | 已实现：`import` 默认 `trust: quarantined` |
+| 显式 trust/verified_at/status 契约 | 已实现：Experience Contract v0 |
 | 宿主权限、沙箱、危险操作审批 | 宿主责任，不是 Cairn 边界 |
 | 解决 Prompt Injection | **不宣称** |
 
@@ -33,12 +33,20 @@ Cairn 是一个**本地工具**，不是安全边界本身。本文描述它已�
 
 宿主 Agent 必须继续执行自己的指令隔离、权限控制和工具审批。Cairn 不替代这些机制。
 
-### 来源、验证与生命周期（近期契约目标）
+### 来源、验证与生命周期（Experience Contract v0）
 
-- 条目应明确区分 `source`（来源）、`verified_at`（验证依据/时间）、`scope`（适用范围）与 `status`（active/deprecated/archived）。
-- 信任状态至少区分 verified / unverified / quarantined；导入经验默认 quarantine，人工审阅后才 active。
-- **人工批准不等于技术验证；近期验证不等于跨项目适用。**
-- 默认只让 active + verified 的条目参与自动注入；不满足准入条件的条目可以被显式搜索，但不自动进入上下文。
+- 条目字段：`source`（来源）、`verified_at`（验证时间）、`evidence`（可选依据）、
+  `scope`（适用范围）、`status`（active/deprecated/archived）、`trust`
+  （verified/unverified/quarantined）。
+- 自动注入准入：`status: active` + `trust: verified` + 非空 `source` +
+  有效 `verified_at`。不满足条件的条目可以被 `recall --raw` / `show` 查看，
+  但不自动进入上下文。
+- 导入默认 `trust: quarantined`，并丢弃来源中的 `trust/verified_at`；
+  人工复核后才可显式改为 `verified`。
+- **人工批准不等于技术验证；近期验证不等于跨项目适用。** `trust: verified`
+  是条目声明的验证状态，不是签名或加密证明；Cairn 不验证声明是否真实。
+- 旧条目缺少字段时按 `active + unverified` 处理，升级后会停止自动注入，
+  需要逐条复核。
 
 ### 两种失败策略
 
@@ -199,6 +207,7 @@ CAIRN_HOME=/tmp/cairn-clean python3 cairn.py audit
 - [ ] 源码、文档、示例、eval 数据无真实密钥/邮箱/敏感路径；
 - [ ] Git 历史也扫描过，不只看当前工作区；
 - [ ] `CAIRN_HOME=... cairn lint`、`eval`、`audit` 通过；
+- [ ] 条目契约字段已复核；导入/未验证条目没有被误提升为 `verified`；
 - [ ] 旧日志已审计/轮转；
 - [ ] `sanitize` 输出经过人工复核；
 - [x] 本项目许可证已确定：MIT（Copyright (c) 2026 Messia）；
@@ -211,9 +220,10 @@ CAIRN_HOME=/tmp/cairn-clean python3 cairn.py audit
 
 - `audit` 是正则扫描，不覆盖所有编码/变形；
 - 会话去抖文件名仍使用清洗后的 session 标识，而不是哈希；敏感 session ID 场景需要随机化或后续修复；
-- 经验库没有签名/来源验证机制；
+- 经验库没有签名/来源验证机制；`verified` 只是自我声明；
 - 没有恶意经验测试集；
-- 没有写入生命周期（deprecated/archived）与冲突检测；
+- `status` 已可表达 deprecated/archived，但没有 feedback 驱动的生命周期管理；
+- `scope` 尚未参与门控，`verified_at` 不自动过期，冲突检测未实现；
 - 没有对 Hook 宿主协议的跨平台端到端安全测试；
 - 第三方参考材料的许可证/署名义务尚未完成发布前核对。
 

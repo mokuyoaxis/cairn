@@ -5,6 +5,9 @@ kind: method
 updated: 2026-10-19
 scope: verification
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：修复后重新走一遍**原始失败路径**，并把结果贴出来；不能只看"代码改了"或"测试绿了"。

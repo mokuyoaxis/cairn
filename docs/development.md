@@ -6,10 +6,10 @@
 
 ## 0. 摘要
 
-- 58 项单元测试；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + audit。
-- 核心 `cairn.py` 1200 行，零第三方依赖。
+- 69 项单元测试；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + audit。
+- 核心 `cairn.py` 1198 行，零第三方依赖。
 - 单文件核心；控制台/旁路必须独立。
-- 近期优先：Experience Contract、Trust & Applicability Eval、统一 Recall/Explain；控制台暂缓。
+- Experience Contract v0 已实现；近期优先 Trust & Applicability Eval 与统一 Recall/Explain；控制台暂缓。
 
 ## 1. 目录
 
@@ -34,7 +34,7 @@ cairn/
 ├── examples/
 │   ├── README.md          # 示例说明
 │   └── entries/           # 12 条示例
-└── tests/test_cairn.py    # 58 项单元测试
+└── tests/test_cairn.py    # 69 项单元测试
 ```
 
 维护者本地材料默认由 ignore 规则排除，不随仓库发布，也不作为公开文档的依据。
@@ -55,11 +55,11 @@ CAIRN_HOME="$TMP" python3 cairn.py audit
 
 当前基线（2026-10-19）：
 
-- 58 项测试全绿；
-- 12 条示例，lint 通过；
+- 69 项测试全绿；
+- 12 条示例，lint 通过（全部为 `active + verified + source + verified_at` 的 fixture 条目）；
 - 24+25 评测：召回@1 91.7% / @3 100%，注入@1/@3 75%，误触发 4.0%；
 - 平均注入 145 字符/query（未注入计 0），实际注入 18/24 次、194 字符/次；
-- `cairn.py` 1200 行，零第三方依赖；
+- `cairn.py` 1198 行，零第三方依赖；
 - hook 冷启动 p95 约 70ms（本机样本）。
 
 基线数字用于回归，不是性能/效果承诺。
@@ -83,7 +83,7 @@ CI 不安装第三方依赖；没有网络调用。README 顶部的 CI badge 指
 ## 3. 核心约束
 
 1. **单文件核心**：检索、门控、Hook、管理命令都在 `cairn.py`；控制台/旁路应独立。
-2. **核心 ≤1200 行**：当前 1200。新增核心能力前先考虑压缩/复用；不要为了塞功能悄悄破预算。
+2. **核心 ≤1200 行**：当前 1198。新增核心能力前先考虑压缩/复用；不要为了塞功能悄悄破预算。
 3. **零第三方依赖、默认零网络**：只用 stdlib；任何网络能力必须 opt-in、可替换。
 4. **Python 3.9+**：新增语法/API 需确认 3.9 可用。
 5. **Markdown 是唯一权威源**：缓存/索引必须可从 `entries/*.md` 重建。
@@ -96,10 +96,10 @@ CI 不安装第三方依赖；没有网络调用。README 顶部的 CI badge 指
 |---|---|
 | 路径/常量 | `CAIRN_HOME`、默认阈值、token 正则、卡片预算 |
 | 分词 | 中文 2-gram、英文词元、停用 2-gram |
-| 条目读写 | frontmatter 解析、NUL 检查、加载 |
-| Index | BM25、字段加权、归一化分数、缓存 |
+| 条目读写 | frontmatter 解析、契约字段默认值、NUL 检查、加载 |
+| Index | BM25、字段加权、归一化分数、缓存（含契约字段） |
 | 日志 | 隐私安全日志、UTC 时间、去抖会话 |
-| 卡片/门控 | `render_cards`、`gate` |
+| 卡片/门控 | `render_cards`、`is_injectable`、`gate` |
 | 命令 | add/show/lint/import/hook/eval/audit/sanitize/stats 等 |
 | CLI | `build_parser` / `main` |
 
@@ -131,9 +131,16 @@ CI 不安装第三方依赖；没有网络调用。README 顶部的 CI badge 指
 新增条目：
 
 ```bash
+# 默认 status=active、trust=unverified：不会自动注入
 python3 cairn.py add --name <kebab-case> --summary "..." --kind lesson "正文"
+
+# 显式声明已复核：trust=verified 需要 source 与 verified_at
+python3 cairn.py add --name <kebab-case> --summary "..." --kind lesson \
+  --trust verified --source "某次排查" --verified-at 2026-10-19 "正文"
 python3 cairn.py lint
 ```
+
+`trust: verified` 是自我声明，不是技术验证；不要为了让条目进入 Hook 而伪造。
 
 新增测试：
 
@@ -153,11 +160,12 @@ python3 cairn.py lint
 - 平均注入统计：空结果计 0，同时报每 query 与每次注入；
 - `import` slug 归一、非法日期跳过、`--dry-run`、导入后自动 `lint`；
 - 空库 `lint`/`audit` 改为 fail-closed，不再 vacuous pass；
-- 旧日志的审计/轮转说明已写入 `docs/security.md` 与 `docs/usage.md`。
+- 旧日志的审计/轮转说明已写入 `docs/security.md` 与 `docs/usage.md`；
+- **Experience Contract v0**：`status` / `trust` / `verified_at` / `source`，
+  自动注入要求 `active + verified + source + verified_at`；导入默认 quarantine。
 
 剩余：
 
-- **Experience Contract v0**：source / verified_at / scope / status / trust / 准入条件；
 - **统一 Recall / Explain**：同候选、同门控、同拒绝理由；
 - **Trust & Applicability Eval**：恶意/过期/scope/冲突/abstention；
 - **完整控制台暂缓**（D17）：先统一契约与评测，未来 Ask 优先于 Library。

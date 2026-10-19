@@ -5,6 +5,9 @@ kind: method
 updated: 2026-10-19
 scope: ops
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：落盘、传输、聚合都用 UTC 并显式带时区；只在界面层做本地化。

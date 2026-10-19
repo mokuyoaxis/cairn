@@ -5,6 +5,9 @@ kind: lesson
 updated: 2026-10-19
 scope: shell, python
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：`wait` 不带 PID 会等**全部**子进程。只等指定 PID，或改成轮询 + 超时。

@@ -5,6 +5,9 @@ kind: lesson
 updated: 2026-10-19
 scope: docker, security
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：不要用 `docker compose config` 检查配置。它会把 `env_file` 展开成实际值打印出来。

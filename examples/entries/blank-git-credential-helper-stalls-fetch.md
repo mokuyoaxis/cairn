@@ -5,6 +5,9 @@ kind: lesson
 updated: 2026-10-19
 scope: git
 source: cairn 示例
+status: active
+trust: verified
+verified_at: 2026-10-19
 ---
 
 **做法**：`git config credential.helper ""` 不是关闭凭据助手，而是留下一个空条目。
