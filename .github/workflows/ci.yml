@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Core budget
+        run: test "$(wc -l < cairn.py)" -le 1200
+
+      - name: Lint, eval and audit on example fixture
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cp -a examples/. "$tmp"/
+          export CAIRN_HOME="$tmp"
+          test -n "$(find "$CAIRN_HOME/entries" -maxdepth 1 -name '*.md' -print -quit)"
+          python cairn.py lint
+          python cairn.py eval
+          python cairn.py audit

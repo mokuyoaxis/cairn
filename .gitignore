@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+# 本地 Agent 约束与内部材料（仅本机使用，不随仓库发布；新克隆不会包含）
+/AGENTS.md
+/.internal/
+
+# 运行时数据（条目的索引缓存、日志、会话状态）
+examples/cache/
+examples/log/
+*.log

@@ -1,0 +1,24 @@
+{"query": "compose 一执行就把密码打出来了", "expect": ["config-dump-reveals-secret-values"]}
+{"query": "配置文件里的明文 token 被打印到终端", "expect": ["config-dump-reveals-secret-values"]}
+{"query": "docker exec 里写 heredoc 完全没反应", "expect": ["exec-heredoc-needs-stdin"]}
+{"query": "进了容器跑脚本 什么都不输出也不报错", "expect": ["exec-heredoc-needs-stdin"]}
+{"query": "脚本卡在 wait 一直不动", "expect": ["wait-all-children-hangs"]}
+{"query": "起了后台服务之后 测试脚本就挂住了", "expect": ["wait-all-children-hangs"]}
+{"query": "git fetch 停在那里没有任何输出", "expect": ["blank-git-credential-helper-stalls-fetch"]}
+{"query": "credential.helper 设成空串会怎么样", "expect": ["blank-git-credential-helper-stalls-fetch"]}
+{"query": "CI 显示通过 但测试其实没跑", "expect": ["green-pipeline-with-skipped-jobs"]}
+{"query": "流水线是绿的 但 job 被跳过了", "expect": ["green-pipeline-with-skipped-jobs"]}
+{"query": "重试以后出现两条一样的订单", "expect": ["retry-without-idempotency-duplicates"]}
+{"query": "超时自动重发造成重复提交", "expect": ["retry-without-idempotency-duplicates"]}
+{"query": "怎么确认问题真的修好了", "expect": ["measure-before-declaring-fixed"]}
+{"query": "改完就说修好了 结果又复现了", "expect": ["measure-before-declaring-fixed"]}
+{"query": "脚本里的工具版本没有锁 过几天跑不起来", "expect": ["pin-tool-versions-in-scripts"]}
+{"query": "依赖 latest 导致构建结果不稳定", "expect": ["pin-tool-versions-in-scripts"]}
+{"query": "改了配置但缓存还是旧的", "expect": ["cache-key-must-include-config"]}
+{"query": "构建缓存没有失效 用了旧产物", "expect": ["cache-key-must-include-config"]}
+{"query": "日志时间对不上 差了八个小时", "expect": ["utc-in-logs-and-storage"]}
+{"query": "时间戳应该存本地时区还是 UTC", "expect": ["utc-in-logs-and-storage"]}
+{"query": "路径里有空格 命令就报错", "expect": ["quoted-paths-with-spaces"]}
+{"query": "文件名带空格 参数被拆成两个", "expect": ["quoted-paths-with-spaces"]}
+{"query": "拷贝 sqlite 数据库之后打开报损坏", "expect": ["sqlite-wal-is-not-portable-across-machines"]}
+{"query": "wal 文件要不要跟 db 一起拷走", "expect": ["sqlite-wal-is-not-portable-across-machines"]}
