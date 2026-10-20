@@ -92,6 +92,7 @@ python3 eval/contract_eval.py
 | Gate | 内容 |
 |---|---|
 | Python 矩阵 | 3.9、3.12 |
+| Runner | 3.9 固定在 `ubuntu-22.04`；`ubuntu-latest` 已迁移到 26.04，setup-python 暂无 3.9 构建 |
 | Unit tests | `python -m unittest discover -s tests -v` |
 | Core budget | `wc -l cairn.py` ≤1200 |
 | 非空库 | 示例副本的 `entries/*.md` 必须存在 |

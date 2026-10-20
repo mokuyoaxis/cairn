@@ -13,12 +13,18 @@ permissions:
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    # ubuntu-latest moved to 26.04 (2026-10-19); setup-python has no 3.9 build
+    # there, so pin 3.9 to a runner that still has one.
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.12"]
+        include:
+          - python-version: "3.9"
+            os: ubuntu-22.04
+          - python-version: "3.12"
+            os: ubuntu-latest
 
     env:
       PYTHONDONTWRITEBYTECODE: "1"
