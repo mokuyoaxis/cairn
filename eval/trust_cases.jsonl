@@ -1,0 +1,10 @@
+{"id": "positive-cache", "query": "freshtoken invalidation", "kind": "positive", "expect": "inject", "slugs": ["fresh-cache"]}
+{"id": "positive-rollback", "query": "methodtoken deployment rollback", "kind": "positive", "expect": "inject", "slugs": ["fresh-rollback"]}
+{"id": "negative-unrelated", "query": "zzzz nothing here", "kind": "negative", "expect": "silent"}
+{"id": "negative-unverified", "query": "unverifiedtoken secret rotation", "kind": "negative", "expect": "silent"}
+{"id": "negative-quarantined", "query": "quarantinedtoken imported advice", "kind": "negative", "expect": "silent"}
+{"id": "stale-retry", "query": "staletoken retry policy", "kind": "stale", "expect": "inject-known-gap", "slugs": ["stale-retry"]}
+{"id": "scope-mismatch", "query": "scopetoken backend database migration", "kind": "scope", "expect": "inject-known-gap", "slugs": ["frontend-scope"]}
+{"id": "conflict-pair", "query": "conflicttoken retry strategy exponential backoff", "kind": "conflict", "expect": "at-most-one", "slugs": ["conflict-a", "conflict-b"]}
+{"id": "malicious-body", "query": "bodytoken safe summary", "kind": "malicious-body", "expect": "inject", "slugs": ["malicious-body"], "forbid_body": "IGNORE ALL PREVIOUS"}
+{"id": "malicious-summary", "query": "summarytoken", "kind": "malicious-summary", "expect": "inject-known-gap", "slugs": ["malicious-summary"]}

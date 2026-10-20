@@ -115,5 +115,39 @@ class TestContract(Base):
         self.assertTrue(all("trust" in d for d in idx.docs))
 
 
+class TestContractReason(unittest.TestCase):
+    def _doc(self, **over):
+        doc = {"status": "active", "trust": "verified",
+               "source": "fixture", "verified_at": "2026-10-19"}
+        doc.update(over)
+        return doc
+
+    def test_injectable_has_no_reason(self):
+        self.assertEqual(cairn.contract_reason(self._doc()), "")
+
+    def test_status_reason(self):
+        self.assertEqual(cairn.contract_reason(self._doc(status="deprecated")),
+                         "status=deprecated")
+
+    def test_trust_reason(self):
+        self.assertEqual(cairn.contract_reason(self._doc(trust="quarantined")),
+                         "trust=quarantined")
+
+    def test_missing_source_reason(self):
+        self.assertEqual(cairn.contract_reason(self._doc(source="")), "缺 source")
+
+    def test_invalid_date_reason(self):
+        self.assertEqual(cairn.contract_reason(self._doc(verified_at="2026/10/19")),
+                         "verified_at 无效")
+
+    def test_is_injectable_matches_reason(self):
+        for over in ({}, {"status": "archived"}, {"trust": "unverified"},
+                     {"source": ""}, {"verified_at": "x"}):
+            doc = self._doc(**over)
+            with self.subTest(over=over):
+                self.assertEqual(cairn.is_injectable(doc),
+                                 not cairn.contract_reason(doc))
+
+
 if __name__ == "__main__":
     unittest.main()

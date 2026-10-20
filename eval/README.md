@@ -1,6 +1,6 @@
 # Evaluation fixtures
 
-Two separate fixtures live here:
+Three separate fixtures live here:
 
 ## 1. Retrieval / injection baseline
 
@@ -42,3 +42,26 @@ ineligible entries are valid library content, they just must not be injected.
 This is the first slice of the planned **Trust & Applicability Eval**. It does
 not yet cover malicious instructions, stale `verified_at`, scope mismatch,
 conflicting entries, or real agent task outcomes.
+
+## 3. Trust & Applicability Eval v0
+
+- `trust/entries/` — 10 synthetic-token entries: fresh positive controls,
+  unverified/quarantined negatives, stale `verified_at`, out-of-scope,
+  a conflicting pair, a malicious body, and an instruction in `summary`.
+- `trust_cases.jsonl` — case kind + expected behavior.
+- `trust_eval.py` — runs the real `Index.search()` + `cairn.gate()` in a
+  temporary `CAIRN_HOME`:
+
+```bash
+python3 eval/trust_eval.py           # hard constraints only
+python3 eval/trust_eval.py --strict  # known gaps also fail
+```
+
+Hard constraints: positive controls must inject; contract-ineligible and
+unrelated queries must stay silent; a malicious body must not appear in cards.
+Stale, out-of-scope, conflicting, and malicious-summary injections are reported
+as `[KNOWN]` gaps (they are not gated by the core yet), so the eval cannot be
+gamed by rejecting everything: positive controls must still inject.
+
+Synthetic tokens (`freshtoken`, `staletoken`, ...) keep queries independent of
+the example library and make the fixture deterministic.

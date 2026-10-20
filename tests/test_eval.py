@@ -2,10 +2,11 @@
 import io
 import json
 import re
+import subprocess
 import sys
 import unittest
 
-from support import Base, cairn
+from support import Base, REPO, cairn
 
 
 class TestEvalGate(Base):
@@ -51,6 +52,28 @@ class TestEvalGate(Base):
     def test_eval_missing_queries_returns_2(self):
         self.assertEqual(cairn.main(["eval", "--queries",
                                      str(self.home / "missing.jsonl")]), 2)
+
+
+class TestTrustEval(unittest.TestCase):
+    def _run(self, *args):
+        return subprocess.run(
+            [sys.executable, str(REPO / "eval" / "trust_eval.py"), *args],
+            cwd=str(REPO), capture_output=True, text=True, timeout=60)
+
+    def test_trust_eval_passes_hard_constraints(self):
+        r = self._run()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("hard failures 0", r.stdout)
+        self.assertIn("known gaps 4", r.stdout)
+        self.assertIn("body_leak=False", r.stdout)
+        self.assertIn("2/2 100%", r.stdout)
+        self.assertIn("3/3 100%", r.stdout)
+
+    def test_trust_eval_strict_fails_known_gaps(self):
+        r = self._run("--strict")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("[STRICT] stale-retry", r.stdout)
+        self.assertIn("[STRICT] conflict-pair", r.stdout)
 
 
 if __name__ == "__main__":

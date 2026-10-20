@@ -142,13 +142,14 @@ See [docs/security.md](docs/security.md) for the threat model and release checkl
 
 | Metric | Value |
 |---|---|
-| Unit tests | 95 passing |
+| Unit tests | 109 passing |
 | Seed library | 12 entries |
 | Evaluation set | 24 positive + 25 negative queries |
 | Recall@1 / @3 | 91.7% / 100% |
 | Injection@1 / @3 | 75% / 75% |
 | False injection rate | 4.0% |
 | Contract admission eval | 3/3 cases |
+| Trust & applicability eval | 10 cases; 4 known gaps |
 | Avg injection (per query / per injection) | 145 / 194 chars |
 | Hook p95 | ~70 ms (single-machine sample) |
 
@@ -175,7 +176,7 @@ Near-term work is about **contracts, trust, and measurement**, not feature count
 
 - Phase 0 correctness fixes, the first Git baseline, and **Experience Contract v0** are complete;
 - **Recall / Explain** now share one admission/gate pipeline; `cairn explain` reports per-candidate refusal reasons without changing hook behavior;
-- a minimal **contract-admission eval** is in place; expand it into a full **Trust & Applicability Evaluation** covering malicious, stale, out-of-scope, conflicting, and quarantined entries;
+- a **contract-admission eval** and **Trust & Applicability Eval v0** are in place; stale, out-of-scope, and conflicting injection is measured but not yet gated;
 - add real-task evaluation before claiming user benefit.
 
 Later:

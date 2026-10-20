@@ -51,3 +51,6 @@ jobs:
 
       - name: Contract admission eval
         run: python eval/contract_eval.py
+
+      - name: Trust & applicability eval
+        run: python eval/trust_eval.py

@@ -62,5 +62,65 @@ class TestRetrieval(Base):
         self.assertIn("已截断", out)
 
 
+class TestGateReport(Base):
+    def _index(self):
+        cairn._INDEX = None
+        return cairn.get_index(force=True)
+
+    def _why(self, report):
+        return {r[4]["name"]: why for r, why in report}
+
+    def test_report_marks_hit_and_low_score(self):
+        self.write("entry-a", summary="alpha beta gamma delta")
+        self.write("entry-b", summary="alpha beta")
+        report = []
+        hits = cairn.gate(self._index().search("alpha beta gamma delta"),
+                          q_len=4, report=report)
+        why = self._why(report)
+        self.assertEqual([h[4]["name"] for h in hits], ["entry-a"])
+        self.assertEqual(why["entry-a"], "hit")
+        self.assertEqual(why["entry-b"], "low_score")
+
+    def test_report_marks_ineligible(self):
+        self.write("entry-a", summary="alpha beta", trust="unverified")
+        report = []
+        cairn.gate(self._index().search("alpha beta"), q_len=2, report=report)
+        self.assertEqual(self._why(report)["entry-a"], "ineligible")
+
+    def test_report_marks_low_coverage(self):
+        self.write("entry-a", summary="alpha beta")
+        report = []
+        cairn.gate(self._index().search("alpha beta zzz"), q_len=3,
+                   min_cover=0.99, report=report)
+        self.assertEqual(self._why(report)["entry-a"], "low_cover")
+
+    def test_report_marks_low_margin(self):
+        self.write("entry-a", summary="alpha beta gamma delta")
+        self.write("entry-b", summary="alpha beta gamma")
+        report = []
+        hits = cairn.gate(self._index().search("alpha beta gamma delta"),
+                          q_len=4, min_margin=99, report=report)
+        self.assertEqual(hits, [])
+        self.assertEqual(set(self._why(report).values()), {"low_margin"})
+
+    def test_report_marks_over_limit(self):
+        self.write("entry-a", summary="alpha beta gamma delta")
+        self.write("entry-b", summary="alpha beta gamma")
+        report = []
+        hits = cairn.gate(self._index().search("alpha beta gamma delta"),
+                          q_len=4, max_cards=1, report=report)
+        why = self._why(report)
+        self.assertEqual([h[4]["name"] for h in hits], ["entry-a"])
+        self.assertEqual(why["entry-a"], "hit")
+        self.assertEqual(why["entry-b"], "over_limit")
+
+    def test_report_does_not_change_hits(self):
+        self.write("entry-a", summary="alpha beta gamma delta")
+        self.write("entry-b", summary="alpha beta gamma")
+        results = self._index().search("alpha beta gamma delta")
+        self.assertEqual(cairn.gate(results, q_len=4),
+                         cairn.gate(results, q_len=4, report=[]))
+
+
 if __name__ == "__main__":
     unittest.main()

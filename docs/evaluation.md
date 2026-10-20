@@ -11,7 +11,8 @@ Cairn 的评测目标是**回归与适用性判断**，不是排行榜。当前�
 - 4.0% 负例仍被注入；安全评测需要单独覆盖恶意/过期/scope 不匹配内容。
 - Experience Contract v0 已实现：注入指标只统计 `active + verified + source + verified_at` 的条目；
   示例库的 `trust: verified` 是 fixture 元数据，不是生产验证。
-- 已加 **Contract admission eval** 最小切片；完整 Trust & Applicability Eval 仍待做，而不是只扩大 Recall。
+- 已加 **Contract admission eval** 与 **Trust & Applicability Eval v0**（10 cases）；
+  过期/scope/冲突/恶意 summary 仍是已知缺口，评测先如实报告，而不是只扩大 Recall。
 
 ## 1. 当前评测集
 
@@ -75,7 +76,7 @@ Cairn 的评测目标是**回归与适用性判断**，不是排行榜。当前�
 | 负例误触发 | 4.0%（1/25） |
 | 平均注入（每 query，未注入计 0） | 145 字符 ≈ 73 tokens |
 | 平均注入（每次实际注入） | 194 字符 ≈ 97 tokens（18/24 次） |
-| 单元测试 | 95 项，全绿 |
+| 单元测试 | 109 项，全绿 |
 | hook p95（本机） | 约 70ms |
 
 解释：
@@ -134,7 +135,7 @@ CAIRN_HOME=./examples python3 cairn.py eval
 
 ### 5.1 Contract admission eval
 
-这是 Trust & Applicability Eval 的最小切片，使用独立的混合信任 fixture，不污染
+这是 Trust & Applicability Eval 的准入切片，使用独立的混合信任 fixture，不污染
 示例库：
 
 ```bash
@@ -151,6 +152,34 @@ python3 eval/contract_eval.py
 fixture 与用例说明见 [`eval/README.md`](../eval/README.md)。当前仍是
 lint-warning-only 的合法库：不可注入条目可以存在，只是不能进入上下文。
 
+### 5.2 Trust & Applicability Eval v0
+
+在独立 fixture 上跑真实 `Index.search()` 与 `cairn.gate()`，把**硬约束**与
+**已知缺口**分开报告：
+
+```bash
+python3 eval/trust_eval.py
+python3 eval/trust_eval.py --strict   # 已知缺口也计为失败
+```
+
+硬约束：
+
+- 正控必须注入（防止“全部拒绝”刷安全指标）；
+- unverified / quarantined 与无关 query 必须沉默（错误交付为 0）；
+- 恶意正文不能进入卡片（卡片只含 name + summary + path）。
+
+已知缺口（当前如实报告，不计硬失败）：
+
+| 维度 | 当前结果 | 原因 |
+|---|---|---|
+| 过期 `verified_at` | 1/1 注入 | 没有自动过期 |
+| scope 不匹配 | 1/1 注入 | `scope` 未参与门控 |
+| 冲突条目 | 1/1 同时注入 | 无冲突检测；margin 只能挡住部分近似条目 |
+| 恶意 summary | 1/1 注入 | summary 本来就是卡片内容；`verified` 是自我声明 |
+
+正控 2/2 注入、负例 3/3 沉默、恶意正文泄露 0/1。`--strict` 会把上述四个缺口
+计为失败，供未来修复后做回归开关。
+
 ## 6. 如何扩展评测集
 
 1. 在 `eval/queries.jsonl` 增加 `{"query": "...", "expect": ["slug"]}`；
@@ -163,10 +192,10 @@ lint-warning-only 的合法库：不可注入条目可以存在，只是不能�
 ## 7. 后续评测计划
 
 - **Trust & Applicability Eval（近期优先）**：
-  - 已加最小切片：`eval/contract_eval.py` 覆盖 verified/unverified/quarantine/
-    deprecated/archived 的准入与正确沉默；
-  - 仍待做：恶意指令、过期 `verified_at`、scope 不匹配、冲突条目；
-    记录 Correct Abstention、Malicious/Stale Injection、错误交付，而不只是 Recall；
+  - 已加 `eval/contract_eval.py`（准入/沉默）与 `eval/trust_eval.py` v0
+    （恶意正文、过期、scope、冲突、恶意 summary）；
+  - 仍待做：真实任务结果、更细的 Correct Abstention 与错误交付口径；
+    修复过期/scope/冲突后，把 `--strict` 接入 CI；
 - **v0.2**：正例扩到 ≥80，补足挑战性负例；
 - **v0.3**：扩到 150–200 条，覆盖跨项目/版本/冲突/过时经验；
 - **规模实验**：12 / 100 / 500 / 1000 / 5000 条，记录 p50/p95/p99、内存、注入率、误注入率；

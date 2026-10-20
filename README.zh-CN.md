@@ -24,7 +24,7 @@ Cairn 是一个本地优先、确定性的 **Experience Retrieval Layer（经验
 | 核心 | `cairn.py`，1195 行，零第三方依赖 |
 | 存储 | 带 Experience Contract v0 元数据的本地 Markdown 条目；缓存可重建 |
 | 检索 | 中文 2-gram + 英文词元，BM25，契约准入 + 三道门 |
-| 测试 | 95 项单元测试 |
+| 测试 | 109 项单元测试 |
 | 评测 | 12 条示例库上的 24 条正例 + 25 条负例；另有契约准入 fixture |
 | 延迟 | 冷启动 hook p95 约 70ms（单机样本） |
 | 许可证 | MIT © 2026 Messia |
@@ -142,13 +142,14 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 | 指标 | 数值 |
 |---|---|
-| 单元测试 | 95 项通过 |
+| 单元测试 | 109 项通过 |
 | 示例库 | 12 条 |
 | 评测集 | 24 条正例 + 25 条负例 |
 | 召回@1 / @3 | 91.7% / 100% |
 | 注入@1 / @3 | 75% / 75% |
 | 误触发 | 4.0% |
 | 契约准入 eval | 3/3 cases |
+| Trust & Applicability eval | 10 cases；4 个已知缺口 |
 | 平均注入（每 query / 每次注入） | 145 / 194 字符 |
 | Hook p95 | 约 70ms（单机样本） |
 
@@ -175,7 +176,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 - Phase 0 正确性修复、首个 Git 基线与 **Experience Contract v0** 已完成；
 - **Recall / Explain** 已共用同一套准入与门控；`cairn explain` 输出逐条拒绝理由，不改变 Hook 行为；
-- 已加最小 **contract-admission eval**；继续扩展为完整 **Trust & Applicability Evaluation**，覆盖恶意、过期、scope 不匹配、冲突与 quarantine 条目；
+- 已加 **contract-admission eval** 与 **Trust & Applicability Eval v0**；过期、scope 不匹配、冲突注入已测量但尚未门控；
 - 在声称用户收益前，先做真实任务评测。
 
 之后：
