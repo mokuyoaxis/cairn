@@ -21,10 +21,10 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 | Item | Value |
 |---|---|
 | Status | `v0.1.0` Internal Alpha |
-| Core | `cairn.py`, 1198 lines, zero third-party dependencies |
+| Core | `cairn.py`, 1195 lines, zero third-party dependencies |
 | Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
 | Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, three gates |
-| Tests | 85 unit tests |
+| Tests | 95 unit tests |
 | Evaluation | 24 positive + 25 negative queries on a 12-entry example library; contract admission fixture |
 | Latency | ~70 ms p95 for a cold hook process (single-machine sample) |
 | License | MIT © 2026 Messia |
@@ -75,6 +75,7 @@ cd cairn
 
 # The demo writes only to examples/cache and examples/log, both gitignored.
 CAIRN_HOME=./examples python3 cairn.py recall "docker compose config 密钥"
+CAIRN_HOME=./examples python3 cairn.py explain "docker compose config 密钥"
 ```
 
 Example output:
@@ -104,7 +105,7 @@ Cairn returns cards, not documents. If nothing passes the gates, it stays silent
 5. **Deduplicate.** The same card is injected at most once per session.
 6. **Render.** At most three cards, name + summary + path. Full text is fetched explicitly.
 
-The runtime is read-only. Retrieval, statistics, and validation make no network calls.
+The runtime is read-only. Retrieval, statistics, and validation make no network calls. `cairn explain` runs the same admission and gate pipeline and prints why each candidate was injected or refused.
 
 ---
 
@@ -141,7 +142,7 @@ See [docs/security.md](docs/security.md) for the threat model and release checkl
 
 | Metric | Value |
 |---|---|
-| Unit tests | 85 passing |
+| Unit tests | 95 passing |
 | Seed library | 12 entries |
 | Evaluation set | 24 positive + 25 negative queries |
 | Recall@1 / @3 | 91.7% / 100% |
@@ -173,7 +174,7 @@ Injection length is reported both per query (a no-hit query counts as zero) and 
 Near-term work is about **contracts, trust, and measurement**, not feature count:
 
 - Phase 0 correctness fixes, the first Git baseline, and **Experience Contract v0** are complete;
-- unify **Recall / Explain** around the same candidates, gates, and refusal reasons;
+- **Recall / Explain** now share one admission/gate pipeline; `cairn explain` reports per-candidate refusal reasons without changing hook behavior;
 - a minimal **contract-admission eval** is in place; expand it into a full **Trust & Applicability Evaluation** covering malicious, stale, out-of-scope, conflicting, and quarantined entries;
 - add real-task evaluation before claiming user benefit.
 

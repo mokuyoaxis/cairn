@@ -75,11 +75,7 @@ MAX_CARD_CHARS = 520          # ≈ 260 tokens（中文约 2 字符/token）
 
 # ── 分词 ────────────────────────────────────────────────────────────────
 def tokenize(text: str, keep_stop: bool = False) -> list:
-    """中文按 2-gram、英文按词切分。
-
-    中文没有词边界，2-gram 是零依赖下最稳的近似——「卡死」能切出「卡死」，
-    「一直卡死不返回」也能切出「卡死」。比子串匹配强的地方在于可加权、可排序。
-    """
+    """中文按 2-gram、英文按词切分；零依赖下最稳的近似，可加权、可排序。"""
     if not text:
         return []
     out = []
@@ -158,10 +154,7 @@ def load_entries():
 
 # ── 索引 / 打分 ─────────────────────────────────────────────────────────
 class Index:
-    """2-gram BM25，字段加权：summary ×3 > name ×2 > body ×1。
-    summary 权重最高的理由：它就是给人读的那一句话，作者写它时已经做过摘要，
-    比正文噪声小得多。
-    """
+    """2-gram BM25，字段加权：summary ×3 > name ×2 > body ×1。"""
 
     def __init__(self, entries):
         self.docs = []
@@ -191,12 +184,7 @@ class Index:
         self.avgdl = sum(d["len"] for d in self.docs) / self.n_docs
 
     def search(self, query: str, limit: int = 8):
-        """返回 [(norm, score, matched, desc_matched, doc)]，按 score 降序。
-
-        norm = score / Σ idf(query 词)，取值约 0..1.2：
-        它回答的是「这条 query 的信息有多少被这个条目覆盖」，与库的规模无关，
-        所以阈值可以跨库复用（1 条和 1000 条都适用）。
-        """
+        """返回 [(norm, score, matched, desc_matched, doc)]；norm 为 query 信息覆盖率。"""
         q = list(dict.fromkeys(tokenize(query)))
         if not q or not self.docs:
             return []
@@ -267,11 +255,7 @@ def _cache_file() -> Path:
     return data_home() / "cache" / "index.pkl"
 
 def get_index(force: bool = False) -> Index:
-    """优先读缓存：217 条时建索引约 100ms、读缓存约 20ms。
-
-    缓存失效判据是全部文件的 (mtime, size)，比目录 mtime 可靠——
-    编辑器原地保存不会改目录 mtime。
-    """
+    """优先读缓存；失效判据是全部文件的 (mtime, size)，原地保存也能发现。"""
     global _INDEX
     if _INDEX is not None and not force:
         return _INDEX
@@ -392,39 +376,54 @@ def render_cards(hits, max_chars: int = MAX_CARD_CHARS) -> str:
     lines.append("需要全文用 `cairn show <name>`；都不相关就忽略本提示。")
     return "\n".join(lines)
 
+def contract_reason(doc) -> str:
+    """不可自动注入的原因；可注入时返回空串。"""
+    if doc.get("status") != "active":
+        return f"status={doc.get('status')}"
+    if doc.get("trust") != "verified":
+        return f"trust={doc.get('trust')}"
+    if not doc.get("source"):
+        return "缺 source"
+    if not DATE_RE.match(doc.get("verified_at") or ""):
+        return "verified_at 无效"
+    return ""
+
 def is_injectable(doc) -> bool:
-    """Contract v0: active + verified + source + verified_at."""
-    return (doc.get("status") == "active" and doc.get("trust") == "verified"
-            and bool(doc.get("source"))
-            and bool(DATE_RE.match(doc.get("verified_at") or "")))
+    """Contract v0: active + verified + source + verified_at。"""
+    return not contract_reason(doc)
 
 def gate(results, min_score: float = DEFAULT_MIN_SCORE,
          min_cover: float = DEFAULT_MIN_COVER,
          min_margin: float = DEFAULT_MIN_MARGIN,
-         max_cards: int = MAX_CARDS, q_len: int = 0):
-    """契约准入 + 三道门：归一化分数、query 词覆盖率、领先幅度。
+         max_cards: int = MAX_CARDS, q_len: int = 0, report=None):
+    """契约准入 + 三道门：分数、覆盖率、领先幅度。
 
-    - 覆盖率 = 命中词数 / query 词数：挡住「只撞上一个泛词」的条目；
-    - 领先幅度 = 第一名分数 / 第二名：第一名不明显的场景（两个条目都像）宁可不注入。
-    三道门都作用在排序结果上，不依赖库的规模，所以 12 条和 1000 条用同一组参数。
+    覆盖率 = 命中词数 / query 词数；领先幅度 = 第一名 / 第二名。
+    report 非 None 时追加 (候选, 原因)，explain 与 hook 共用同一套判断。
     """
-    results = [r for r in results if is_injectable(r[4])]
-    if not results:
-        return []
+    def note(rows, why):
+        if report is not None:
+            report.extend((r, why) for r in rows)
     q_len = max(q_len or 1, 1)
-    top_norm = results[0][0]
-    second = results[1][0] if len(results) > 1 else 0.0
-    if top_norm < min_score:
+    ok = [r for r in results if is_injectable(r[4])]
+    note([r for r in results if not is_injectable(r[4])], "ineligible")
+    if not ok:
         return []
-    if top_norm < min_margin * max(second, 1e-9):
+    top, second = ok[0][0], (ok[1][0] if len(ok) > 1 else 0.0)
+    if top < min_score:
+        note(ok, "low_score")
+        return []
+    if top < min_margin * max(second, 1e-9):
+        note(ok, "low_margin")
         return []
     out = []
-    for norm, score, matched, d_matched, doc in results:
-        if norm < min_score or matched / q_len < min_cover:
-            continue
-        out.append((norm, score, matched, d_matched, doc))
-        if len(out) >= max_cards:
-            break
+    for r in ok:
+        why = ("low_score" if r[0] < min_score else
+               "low_cover" if r[2] / q_len < min_cover else
+               "over_limit" if len(out) >= max_cards else "hit")
+        if why == "hit":
+            out.append(r)
+        note([r], why)
     return out
 
 def emit(text: str, fmt: str) -> None:
@@ -477,6 +476,25 @@ def cmd_recall(args) -> int:
     print(render_cards(hits))
     return 0
 
+def cmd_explain(args) -> int:
+    """解释一次检索的候选/分数/契约/门控；只读，不写日志与会话状态。"""
+    idx = get_index()
+    qn = len(tokenize(args.query))
+    report = []
+    hits = gate(idx.search(args.query, limit=20), args.min_score, args.min_cover,
+                args.min_margin, max_cards=args.limit, q_len=qn, report=report)
+    print(f"query: {args.query}｜候选 {len(report)} 条｜会注入 {len(hits)} 条")
+    print(f"门: score≥{args.min_score:.2f} cover≥{args.min_cover:.0%} "
+          f"margin≥{args.min_margin:.2f}x")
+    for (norm, _, matched, _, doc), why in sorted(report, key=lambda x: -x[0][0]):
+        extra = "  " + contract_reason(doc) if why == "ineligible" else ""
+        tag = "INJECT" if why == "hit" else why
+        print(f"  [{tag}] {doc['name']}  norm={norm:.2f} cover={matched}/{qn}"
+              f"{extra}  —  {doc['summary'][:40]}")
+    if not hits:
+        print("[SILENT] 没有条目会进入上下文")
+    return 0 if hits else 1
+
 def cmd_show(args) -> int:
     path = entries_dir() / f"{args.name}.md"
     if not SLUG_RE.match(args.name) or not path.is_file():
@@ -508,8 +526,7 @@ def cmd_add(args) -> int:
     if args.trust == "verified" and not (args.source and args.source.strip()
                                          and args.verified_at
                                          and DATE_RE.match(args.verified_at)):
-        print("[FAIL] trust=verified 需要 --source 与 --verified-at YYYY-MM-DD",
-              file=sys.stderr)
+        print("[FAIL] trust=verified 需要 --source 与 --verified-at YYYY-MM-DD", file=sys.stderr)
         return 2
 
     d = entries_dir()
@@ -633,17 +650,13 @@ def cmd_lint(args) -> int:
             target = m.group(1).strip()
             if target not in slugs and f"{target}" not in slugs:
                 problems.append(f"{e['path']}: [[{target}]] 指向不存在的条目")
-    if problems:
-        print(f"[FAIL] {len(problems)} 项问题（{len(entries)} 条）")
-        for p in problems:
-            print("  - " + p)
-        for w in warnings:
-            print("  [warn] " + w)
-        return 1
-    print(f"[PASS] {len(entries)} 条全部通过")
+    print(f"[FAIL] {len(problems)} 项问题（{len(entries)} 条）" if problems
+          else f"[PASS] {len(entries)} 条全部通过")
+    for p in problems:
+        print("  - " + p)
     for w in warnings:
         print("  [warn] " + w)
-    return 0
+    return 1 if problems else 0
 
 def _slugify(stem: str) -> str:
     """文件名 → kebab-case；纯非 ASCII 时退化为稳定哈希后缀。"""
@@ -651,11 +664,9 @@ def _slugify(stem: str) -> str:
     return slug or "entry-" + hashlib.sha1(stem.encode("utf-8")).hexdigest()[:8]
 
 def cmd_import(args) -> int:
-    """把任意 markdown 条目目录导入成本库格式。
+    """导入任意 markdown 目录：只认 frontmatter，字段归一，默认 quarantine。
 
-    只认 frontmatter；summary|description → summary，kind|type → kind
-    （pitfall→lesson，tool/workflow→method），updated|verified/date、scope|topic 同理。
-    文件名归一为 kebab-case；导入默认 quarantine 并自动跑 lint，避免留下脏库。
+    文件名转 kebab-case；导入后自动跑 lint，避免留下脏库。
     """
     src = Path(args.src).expanduser()
     if not src.is_dir():
@@ -680,10 +691,8 @@ def cmd_import(args) -> int:
             continue
         kind = (fm.get("kind") or "").strip()
         if kind not in KINDS:
-            kind = {"pitfall": "lesson", "tool": "method",
-                    "workflow": "method"}.get((fm.get("type") or "").strip().lower(), kind)
-        if kind not in KINDS:
-            kind = "lesson"
+            kind = {"pitfall": "lesson", "tool": "method", "workflow": "method"}.get(
+                (fm.get("type") or "").strip().lower(), "lesson")
         updated = (fm.get("updated") or fm.get("verified") or fm.get("date")
                    or date.today().isoformat()).strip()
         if not DATE_RE.match(updated):
@@ -725,10 +734,7 @@ def cmd_import(args) -> int:
     return 0 if args.dry_run else cmd_lint(args)
 
 def cmd_prune_links(args) -> int:
-    """导入时剔除了部分条目后，把指向它们的 [[双链]] 去掉。
-
-    宁可删链接也不放宽 lint —— 死链是「检索层以为有条目」的典型来源。
-    """
+    """删除指向不存在条目的 [[双链]]；宁可删链接也不放宽 lint。"""
     entries, _ = load_entries()
     slugs = {e["slug"] for e in entries} | {e["name"] for e in entries}
     changed = 0
@@ -841,12 +847,7 @@ def _atomic_write_text(path: Path, text: str) -> None:
                 pass
 
 def cmd_sanitize(args) -> int:
-    """把库复制一份并替换可识别信息，原库一个字节都不动。
-
-    - 输出目录不得等于或位于 entries/ 内（含符号链接解析后的路径）；
-    - 默认不覆盖已有目标文件，必须显式 --force；
-    - 所有源文件先读入、替换后再原子写入，避免失败时留下半截目标。
-    """
+    """复制一份并替换可识别信息，原库不动；默认不覆盖，先读后原子写。"""
     source_dir = entries_dir().resolve()
     out = Path(args.out).expanduser().resolve()
     if out == source_dir or out.is_relative_to(source_dir):
@@ -914,11 +915,7 @@ def _audit_files():
     return files + ([("cache/index.pkl", cache)] if cache.is_file() else [])
 
 def cmd_audit(args) -> int:
-    """脱敏体检：按级别扫凭据 / 邮箱 / 路径 / 业务数字。
-
-    范围：entries/*.md、log/*.jsonl、log/session-*.json、cache/index.pkl。
-    只报告不修改 —— 自动改写会悄悄毁掉条目语义，删哪句必须人决定。
-    """
+    """脱敏体检：只报告不修改；自动改写会毁掉条目语义。"""
     d = entries_dir()
     if not d.is_dir() or not any(d.glob("*.md")):
         print("[FAIL] 0 条经验：库为空或 CAIRN_HOME 指向错误目录")
@@ -967,10 +964,7 @@ def cmd_audit(args) -> int:
     return 0
 
 def cmd_nudge(args) -> int:
-    """Stop 钩子用：会话收尾提醒一次，不判断该不该沉淀。
-
-    判断交给刚干完活、上下文完整的 agent 自己——比任何外部分类器都准。
-    """
+    """Stop 钩子用：会话收尾提醒一次；是否沉淀交给 agent 自己判断。"""
     text = ("【cairn】这轮若有跨项目可复用的教训，用 "
             "`cairn add --name <slug> --summary \"...\"` 落一条；"
             "已经写过的忽略本提示。")
@@ -1026,10 +1020,7 @@ def cmd_stats(args) -> int:
     return 0
 
 def cmd_eval(args) -> int:
-    """回归闸门。同时报两个口径，别用一个数字糊弄自己：
-    - 召回@3：正确条目是否出现在排序前 3（衡量检索本身）
-    - 注入@3：过门后真正会被注入的卡片里是否有正确条目（衡量产品行为）
-    """
+    """回归闸门：同时报排序（召回）与产品行为（注入），别用一个数字糊弄自己。"""
     idx = get_index()
     qfile = Path(args.queries)
     if not qfile.is_file():
@@ -1090,6 +1081,12 @@ def cmd_eval(args) -> int:
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────
+def add_gate_args(s) -> None:
+    for name, default in (("min-score", DEFAULT_MIN_SCORE),
+                          ("min-cover", DEFAULT_MIN_COVER),
+                          ("min-margin", DEFAULT_MIN_MARGIN)):
+        s.add_argument(f"--{name}", type=float, default=default)
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="cairn", description="极简经验库")
     p.add_argument("--version", action="version", version=f"cairn {VERSION}")
@@ -1099,10 +1096,14 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("query")
     s.add_argument("--limit", type=int, default=3)
     s.add_argument("--raw", action="store_true", help="打印原始分数")
-    s.add_argument("--min-score", type=float, default=DEFAULT_MIN_SCORE)
-    s.add_argument("--min-cover", type=float, default=DEFAULT_MIN_COVER)
-    s.add_argument("--min-margin", type=float, default=DEFAULT_MIN_MARGIN)
+    add_gate_args(s)
     s.set_defaults(func=cmd_recall)
+
+    s = sub.add_parser("explain", help="解释检索的契约准入与门控")
+    s.add_argument("query")
+    s.add_argument("--limit", type=int, default=3)
+    add_gate_args(s)
+    s.set_defaults(func=cmd_explain)
 
     s = sub.add_parser("show", help="打印条目全文（记一次命中）")
     s.add_argument("name")
@@ -1142,9 +1143,7 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("hook", help="平台 hook 入口（stdin JSON → stdout JSON）")
     s.add_argument("--format", default="claude",
                    choices=("claude", "codex", "text", "json"))
-    s.add_argument("--min-score", type=float, default=DEFAULT_MIN_SCORE)
-    s.add_argument("--min-cover", type=float, default=DEFAULT_MIN_COVER)
-    s.add_argument("--min-margin", type=float, default=DEFAULT_MIN_MARGIN)
+    add_gate_args(s)
     s.set_defaults(func=cmd_hook)
 
     s = sub.add_parser("eval", help="离线回归闸门")
@@ -1152,9 +1151,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--negatives", default=str(Path(__file__).resolve().parent / "eval" / "negatives.jsonl"))
     s.add_argument("--min-inject", type=float, default=0.70)
     s.add_argument("--max-noise", type=float, default=0.10)
-    s.add_argument("--min-score", type=float, default=DEFAULT_MIN_SCORE)
-    s.add_argument("--min-cover", type=float, default=DEFAULT_MIN_COVER)
-    s.add_argument("--min-margin", type=float, default=DEFAULT_MIN_MARGIN)
+    add_gate_args(s)
     s.set_defaults(func=cmd_eval)
 
     s = sub.add_parser("feedback", help="记录某条经验有用/误导")

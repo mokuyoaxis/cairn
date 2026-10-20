@@ -197,7 +197,7 @@ Cairn 区分两种失败：
 
 ## 11. 约束
 
-- 核心 `cairn.py` ≤1200 行；当前 1198；
+- 核心 `cairn.py` ≤1200 行；当前 1195；
 - 单文件核心；控制台/旁路必须独立模块；
 - 零第三方依赖、默认零网络；
 - Python 3.9+；
@@ -212,16 +212,17 @@ Cairn 区分两种失败：
 - 同义词/别名表；
 - 不同库规模下的阈值校准；
 - 上下文压缩后的重新注入；
-- 可选的 `cairn explain "<query>"` 决策解释。
+- Explain 是否需要稳定的机器可读输出（JSON）供上层消费。
 
 ## 13. Recall 时机与契约边界
 
 - **Prompt-time Recall 是当前默认实现**：用户提问时检索，过门后注入卡片。
 - **Decision-time Recall 是长期方向**：在 Agent 决定下一步之前提供经验；暂不新增 Hook、平台矩阵或新的运行时入口。
-- Recall 与 Explain 必须共用同一套候选、分数、覆盖率、门控与拒绝理由；Explain 不能改变正常 Hook 行为。
+- Recall 与 Explain 已共用同一套候选、分数、覆盖率、门控与拒绝理由；Explain 只读，不改变正常 Hook 行为。
 - Experience Contract v0 已实现：来源、验证时间、生命周期、信任状态可表达；
   自动注入要求 `active + verified + source + verified_at`，导入默认 quarantine。
-- Recall 与 Explain 仍需统一为同一候选/门控/拒绝理由；当前 `--raw` 只用于显式调试。
+- `cairn explain "<query>"` 输出逐条 `[INJECT]` / `ineligible` / `low_score` /
+  `low_cover` / `low_margin` / `over_limit` 与 `[SILENT]`，不写日志、不消耗会话去重。
 
 ## 14. 产品边界
 

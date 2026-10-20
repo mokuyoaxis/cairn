@@ -132,18 +132,35 @@ python3 cairn.py add \
 - 目标已存在时拒绝覆盖，`--force` 显式覆盖；
 - 写入后立刻自检；有 ERROR 时返回非零；未验证条目会打印“不会自动注入”警告。
 
-### 4.2 `recall`
+### 4.2 `recall` / `explain`
 
 ```bash
 python3 cairn.py recall "docker exec 里写 heredoc 完全没反应"
 python3 cairn.py recall "..." --raw          # 看原始分数与命中词数
 python3 cairn.py recall "..." --limit 3      # 最多几张卡片
+python3 cairn.py explain "..."               # 解释候选、分数与拒绝理由
 ```
 
 - 默认只返回通过 Experience Contract 与三道门的可注入条目；
 - 没有条目过门时输出 `[无相关条目]`，退出码 1；
 - `--raw` 绕过契约与门控，显示所有候选、分数及 `[status/trust]`，用于调试和复核；
 - `--min-score` / `--min-cover` / `--min-margin` 可临时调整三道门。
+
+`explain` 与 `recall` / `hook` 共用同一套候选与门控，逐条打印：
+
+```
+query: docker compose 密钥 明文｜候选 6 条｜会注入 1 条
+门: score≥0.40 cover≥20% margin≥1.50x
+  [ineligible] imported-quarantine  norm=1.54 cover=4/4  trust=quarantined  —  docker compose config 密钥 明文
+  [INJECT] verified-active  norm=1.54 cover=4/4  —  docker compose config 密钥 明文
+  [low_score] ...  norm=0.35 cover=1/4  —  ...
+```
+
+- 原因包括 `ineligible`（附 `status` / `trust` / 缺 `source` / 无效
+  `verified_at`）、`low_score`、`low_cover`、`low_margin`、`over_limit`；
+- 只读：不写日志、不更新会话去重、不改变 Hook 行为；
+- 无候选或全部被拒绝时输出 `[SILENT]`，退出码 1；有可注入条目时退出码 0；
+- 支持与 `recall` 相同的 `--limit` 与三道门参数。
 
 ### 4.3 `show` / `ls`
 
@@ -307,7 +324,7 @@ python3 /path/to/cairn/cairn.py hook --format codex <<<'{"prompt":"...","session
 
 **`[无相关条目]` 是正常的。**
 
-说明没有条目同时通过契约与门控；可用 `--raw` 看候选、分数与 `[status/trust]`，或检查 `summary` 是否覆盖了用户会用的说法。不要为了“有输出”盲目降低阈值或伪造 `verified`。
+说明没有条目同时通过契约与门控；可用 `cairn explain "..."` 看每条候选的具体拒绝理由，或 `--raw` 看候选、分数与 `[status/trust]`，再检查 `summary` 是否覆盖了用户会用的说法。不要为了“有输出”盲目降低阈值或伪造 `verified`。
 
 **Hook 没有输出。**
 
@@ -315,7 +332,7 @@ python3 /path/to/cairn/cairn.py hook --format codex <<<'{"prompt":"...","session
 
 **有条目命中了，但仍不注入。**
 
-先跑 `lint` 看 `[warn] 不会自动注入`，再跑 `recall "..." --raw` 看 `[status/trust]`。补 `source`、`verified_at`，并把 `trust` 改为 `verified`；导入条目默认是 `quarantined`。不要直接把 `trust` 改成 `verified` 而不做复核。
+先跑 `cairn explain "..."` 看具体拒绝理由（`ineligible` / `low_score` / `low_cover` / `low_margin` / `over_limit`），再跑 `lint` 看 `[warn] 不会自动注入`，或 `recall "..." --raw` 看 `[status/trust]`。补 `source`、`verified_at`，并把 `trust` 改为 `verified`；导入条目默认是 `quarantined`。不要直接把 `trust` 改成 `verified` 而不做复核。
 
 **`lint`/`audit` 显示 `0 条` 并 FAIL。**
 
