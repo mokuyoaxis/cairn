@@ -25,7 +25,7 @@ Cairn 是一个本地优先、确定性的 **Experience Retrieval Layer（经验
 | 存储 | 带 Experience Contract v0 元数据的本地 Markdown 条目；缓存可重建 |
 | 检索 | 中文 2-gram + 英文词元，BM25，契约准入 + 三道门 |
 | 测试 | 109 项单元测试 |
-| 评测 | 12 条示例库上的 24 条正例 + 25 条负例；另有契约准入 fixture |
+| 评测 | 12 条示例库上的 80 条正例 + 60 条负例；另有契约准入 fixture |
 | 延迟 | 冷启动 hook p95 约 70ms（单机样本） |
 | 许可证 | MIT © 2026 Messia |
 

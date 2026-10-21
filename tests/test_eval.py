@@ -56,8 +56,11 @@ class TestEvalGate(Base):
 
 class TestTrustEval(unittest.TestCase):
     def _run(self, *args):
+        # sys.executable may be empty in embedded/sandboxed interpreters;
+        # fall back to the same `python3` the suite itself was launched with.
+        exe = sys.executable or "python3"
         return subprocess.run(
-            [sys.executable, str(REPO / "eval" / "trust_eval.py"), *args],
+            [exe, str(REPO / "eval" / "trust_eval.py"), *args],
             cwd=str(REPO), capture_output=True, text=True, timeout=60)
 
     def test_trust_eval_passes_hard_constraints(self):

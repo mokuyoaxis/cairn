@@ -1,24 +1,80 @@
-{"query": "compose 一执行就把密码打出来了", "expect": ["config-dump-reveals-secret-values"]}
-{"query": "配置文件里的明文 token 被打印到终端", "expect": ["config-dump-reveals-secret-values"]}
-{"query": "docker exec 里写 heredoc 完全没反应", "expect": ["exec-heredoc-needs-stdin"]}
-{"query": "进了容器跑脚本 什么都不输出也不报错", "expect": ["exec-heredoc-needs-stdin"]}
-{"query": "脚本卡在 wait 一直不动", "expect": ["wait-all-children-hangs"]}
-{"query": "起了后台服务之后 测试脚本就挂住了", "expect": ["wait-all-children-hangs"]}
-{"query": "git fetch 停在那里没有任何输出", "expect": ["blank-git-credential-helper-stalls-fetch"]}
-{"query": "credential.helper 设成空串会怎么样", "expect": ["blank-git-credential-helper-stalls-fetch"]}
-{"query": "CI 显示通过 但测试其实没跑", "expect": ["green-pipeline-with-skipped-jobs"]}
-{"query": "流水线是绿的 但 job 被跳过了", "expect": ["green-pipeline-with-skipped-jobs"]}
-{"query": "重试以后出现两条一样的订单", "expect": ["retry-without-idempotency-duplicates"]}
-{"query": "超时自动重发造成重复提交", "expect": ["retry-without-idempotency-duplicates"]}
-{"query": "怎么确认问题真的修好了", "expect": ["measure-before-declaring-fixed"]}
-{"query": "改完就说修好了 结果又复现了", "expect": ["measure-before-declaring-fixed"]}
-{"query": "脚本里的工具版本没有锁 过几天跑不起来", "expect": ["pin-tool-versions-in-scripts"]}
-{"query": "依赖 latest 导致构建结果不稳定", "expect": ["pin-tool-versions-in-scripts"]}
-{"query": "改了配置但缓存还是旧的", "expect": ["cache-key-must-include-config"]}
-{"query": "构建缓存没有失效 用了旧产物", "expect": ["cache-key-must-include-config"]}
-{"query": "日志时间对不上 差了八个小时", "expect": ["utc-in-logs-and-storage"]}
-{"query": "时间戳应该存本地时区还是 UTC", "expect": ["utc-in-logs-and-storage"]}
-{"query": "路径里有空格 命令就报错", "expect": ["quoted-paths-with-spaces"]}
-{"query": "文件名带空格 参数被拆成两个", "expect": ["quoted-paths-with-spaces"]}
-{"query": "拷贝 sqlite 数据库之后打开报损坏", "expect": ["sqlite-wal-is-not-portable-across-machines"]}
-{"query": "wal 文件要不要跟 db 一起拷走", "expect": ["sqlite-wal-is-not-portable-across-machines"]}
+{"query":"compose 一执行就把密码打出来了","expect":["config-dump-reveals-secret-values"]}
+{"query":"配置文件里的明文 token 被打印到终端","expect":["config-dump-reveals-secret-values"]}
+{"query":"docker exec 里写 heredoc 完全没反应","expect":["exec-heredoc-needs-stdin"]}
+{"query":"进了容器跑脚本 什么都不输出也不报错","expect":["exec-heredoc-needs-stdin"]}
+{"query":"脚本卡在 wait 一直不动","expect":["wait-all-children-hangs"]}
+{"query":"起了后台服务之后 测试脚本就挂住了","expect":["wait-all-children-hangs"]}
+{"query":"git fetch 停在那里没有任何输出","expect":["blank-git-credential-helper-stalls-fetch"]}
+{"query":"credential.helper 设成空串会怎么样","expect":["blank-git-credential-helper-stalls-fetch"]}
+{"query":"CI 显示通过 但测试其实没跑","expect":["green-pipeline-with-skipped-jobs"]}
+{"query":"流水线是绿的 但 job 被跳过了","expect":["green-pipeline-with-skipped-jobs"]}
+{"query":"重试以后出现两条一样的订单","expect":["retry-without-idempotency-duplicates"]}
+{"query":"超时自动重发造成重复提交","expect":["retry-without-idempotency-duplicates"]}
+{"query":"怎么确认问题真的修好了","expect":["measure-before-declaring-fixed"]}
+{"query":"改完就说修好了 结果又复现了","expect":["measure-before-declaring-fixed"]}
+{"query":"脚本里的工具版本没有锁 过几天跑不起来","expect":["pin-tool-versions-in-scripts"]}
+{"query":"依赖 latest 导致构建结果不稳定","expect":["pin-tool-versions-in-scripts"]}
+{"query":"改了配置但缓存还是旧的","expect":["cache-key-must-include-config"]}
+{"query":"构建缓存没有失效 用了旧产物","expect":["cache-key-must-include-config"]}
+{"query":"日志时间对不上 差了八个小时","expect":["utc-in-logs-and-storage"]}
+{"query":"时间戳应该存本地时区还是 UTC","expect":["utc-in-logs-and-storage"]}
+{"query":"路径里有空格 命令就报错","expect":["quoted-paths-with-spaces"]}
+{"query":"文件名带空格 参数被拆成两个","expect":["quoted-paths-with-spaces"]}
+{"query":"拷贝 sqlite 数据库之后打开报损坏","expect":["sqlite-wal-is-not-portable-across-machines"]}
+{"query":"wal 文件要不要跟 db 一起拷走","expect":["sqlite-wal-is-not-portable-across-machines"]}
+{"query":"docker compose config 输出的环境变量是实际值不是占位符","expect":["config-dump-reveals-secret-values"]}
+{"query":"校验 compose 文件结果把数据库密码显示在日志里","expect":["config-dump-reveals-secret-values"]}
+{"query":"docker exec 的管道输入被吃掉了","expect":["exec-heredoc-needs-stdin"]}
+{"query":"echo 数据 pipe 进容器 脚本读不到","expect":["exec-heredoc-needs-stdin"]}
+{"query":"bash wait 不指定 PID 就一直等","expect":["wait-all-children-hangs"]}
+{"query":"后台进程不退出 wait 永远不返回","expect":["wait-all-children-hangs"]}
+{"query":"git clone 卡住 终端一直等着输密码","expect":["blank-git-credential-helper-stalls-fetch"]}
+{"query":"credential helper 是空字符串 git 拉取挂起","expect":["blank-git-credential-helper-stalls-fetch"]}
+{"query":"pipeline 绿色通过 但有个 stage 压根没执行","expect":["green-pipeline-with-skipped-jobs"]}
+{"query":"CI 全绿 可是 step 被 skip 掉了","expect":["green-pipeline-with-skipped-jobs"]}
+{"query":"接口重试产生了重复记录","expect":["retry-without-idempotency-duplicates"]}
+{"query":"没有幂等键的重试机制创建了多条重复数据","expect":["retry-without-idempotency-duplicates"]}
+{"query":"声称已修复但没有独立验证步骤","expect":["measure-before-declaring-fixed"]}
+{"query":"bug 又复现了 之前说修好是假的","expect":["measure-before-declaring-fixed"]}
+{"query":"构建脚本用 latest 标签 环境天天变","expect":["pin-tool-versions-in-scripts"]}
+{"query":"不锁定工具链版本 部署脚本突然失效","expect":["pin-tool-versions-in-scripts"]}
+{"query":"配置文件变了 缓存 key 没变 拿到旧结果","expect":["cache-key-must-include-config"]}
+{"query":"缓存键不包含配置 hash 改配置不生效","expect":["cache-key-must-include-config"]}
+{"query":"服务器日志时间和本地差八小时","expect":["utc-in-logs-and-storage"]}
+{"query":"跨时区日志时间戳混乱 统一用 UTC","expect":["utc-in-logs-and-storage"]}
+{"query":"命令行参数包含空格被错误分割","expect":["quoted-paths-with-spaces"]}
+{"query":"shell 脚本处理带空格的文件名报错","expect":["quoted-paths-with-spaces"]}
+{"query":"复制 sqlite 文件没有连 wal 一起拷 数据丢了","expect":["sqlite-wal-is-not-portable-across-machines"]}
+{"query":"sqlite 数据库迁移后部分内容不见了","expect":["sqlite-wal-is-not-portable-across-machines"]}
+{"query":"docker 容器里执行 shell 脚本 输入被吞掉","expect":["exec-heredoc-needs-stdin"]}
+{"query":"git 拉取私有仓库 终端卡住无响应","expect":["blank-git-credential-helper-stalls-fetch"]}
+{"query":"CI 流水线构建成功 单元测试阶段被跳过","expect":["green-pipeline-with-skipped-jobs"]}
+{"query":"API 超时重发请求 数据库出现重复条目","expect":["retry-without-idempotency-duplicates"]}
+{"query":"脚本中工具版本不固定 昨天能跑今天报错","expect":["pin-tool-versions-in-scripts"]}
+{"query":"改完配置 缓存键还是原来的 拿到旧数据","expect":["cache-key-must-include-config"]}
+{"query":"日志记录的时间戳跟实际时间对不上 差时区","expect":["utc-in-logs-and-storage"]}
+{"query":"sqlite 数据库文件跨机器拷贝 打不开报损坏","expect":["sqlite-wal-is-not-portable-across-machines"]}
+{"query":"compose config 泄露密钥","expect":["config-dump-reveals-secret-values"]}
+{"query":"wait 挂死","expect":["wait-all-children-hangs"]}
+{"query":"sqlite wal 拷贝","expect":["sqlite-wal-is-not-portable-across-machines"]}
+{"query":"UTC 时区","expect":["utc-in-logs-and-storage"]}
+{"query":"docker compose config prints secrets","expect":["config-dump-reveals-secret-values"]}
+{"query":"git fetch hangs asking for password","expect":["blank-git-credential-helper-stalls-fetch"]}
+{"query":"sqlite wal file not copied database corrupted","expect":["sqlite-wal-is-not-portable-across-machines"]}
+{"query":"retry without idempotency creates duplicate records","expect":["retry-without-idempotency-duplicates"]}
+{"query":"我今天用 docker compose 起了一个服务 然后想检查一下配置文件有没有写错 就运行了 config 命令 结果密码全打在屏幕上了","expect":["config-dump-reveals-secret-values"]}
+{"query":"我们在 CI 上跑测试 每次流水线的状态都是绿色通过 但是最近发现有一个测试 job 实际上是被跳过了根本没执行","expect":["green-pipeline-with-skipped-jobs"]}
+{"query":"我们的下单接口有时候会因为网络抖动超时 前端会自动重试 结果用户收到了两条重复订单","expect":["retry-without-idempotency-duplicates"]}
+{"query":"我的构建脚本里面引用了一个外部工具 没有指定具体版本号 用的是 latest 上周还能跑这周就挂了","expect":["pin-tool-versions-in-scripts"]}
+{"query":"我把 sqlite 数据库文件从一台服务器 scp 到另一台 然后在新机器上打开就报数据库损坏 但是原机器上是好的","expect":["sqlite-wal-is-not-portable-across-machines"]}
+{"query":"生产环境的日志时间戳和监控面板显示的时间差了八个小时 查了半天发现是时区设置不一致","expect":["utc-in-logs-and-storage"]}
+{"query":"我在 windows 上写了一个批处理脚本 处理用户上传的文件 有些文件名带空格 脚本就把一个文件名拆成了好几个参数","expect":["quoted-paths-with-spaces"]}
+{"query":"我写了一个 shell 脚本启动后台服务 最后用 wait 等待所有进程结束 结果脚本就一直挂在那里不动了","expect":["wait-all-children-hangs"]}
+{"query":"git 命令执行后终端就没有反应了 一直等待","expect":["blank-git-credential-helper-stalls-fetch"]}
+{"query":"数据写进去了但查询结果不对 好像用的还是旧配置","expect":["cache-key-must-include-config"]}
+{"query":"部署完了 显示成功 但实际上有个步骤根本没跑","expect":["green-pipeline-with-skipped-jobs"]}
+{"query":"同样的请求发了两次 后台产生了两条一模一样的记录","expect":["retry-without-idempotency-duplicates"]}
+{"query":"bash 脚本启动了后台进程就卡住 wait 永远不返回","expect":["wait-all-children-hangs"]}
+{"query":"数据库文件换了个机器就打不开了","expect":["sqlite-wal-is-not-portable-across-machines"]}
+{"query":"命令执行的结果里把敏感信息直接输出来了","expect":["config-dump-reveals-secret-values"]}
+{"query":"改了配置文件重新构建 但行为跟之前完全一样","expect":["cache-key-must-include-config"]}

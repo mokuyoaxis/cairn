@@ -1,25 +1,60 @@
-{"query": "帮我写一个快速排序"}
-{"query": "这段 Python 怎么改成异步的"}
-{"query": "把按钮颜色改成蓝色"}
-{"query": "解释一下闭包是什么"}
-{"query": "帮我把这个 JSON 转成表格"}
-{"query": "写一个正则匹配邮箱地址"}
-{"query": "如何系统地学习 Rust"}
-{"query": "帮我想三个产品名字"}
-{"query": "把这段英文翻译成中文"}
-{"query": "推荐几本讲算法的书"}
-{"query": "这个函数的时间复杂度是多少"}
-{"query": "帮我把数组去重并排序"}
-{"query": "写一个 shell 脚本批量重命名文件"}
-{"query": "SQL 里两张表怎么做 join"}
-{"query": "帮我把这张图压缩一下"}
-{"query": "总结一下这篇文章的主要观点"}
-{"query": "用 Python 写一个简单的贪吃蛇"}
-{"query": "给这段代码加上注释"}
-{"query": "如何提高英语口语"}
-{"query": "解释一下什么是哈希表"}
-{"query": "帮我把这个列表倒序输出"}
-{"query": "写一个函数判断字符串是不是回文"}
-{"query": "如何配置 VS Code 的字体大小"}
-{"query": "帮我把 Markdown 转成 PDF"}
-{"query": "解释一下什么是递归"}
+{"query":"帮我写一个快速排序"}
+{"query":"这段 Python 怎么改成异步的"}
+{"query":"把按钮颜色改成蓝色"}
+{"query":"解释一下闭包是什么"}
+{"query":"帮我把这个 JSON 转成表格"}
+{"query":"写一个正则匹配邮箱地址"}
+{"query":"如何系统地学习 Rust"}
+{"query":"帮我想三个产品名字"}
+{"query":"把这段英文翻译成中文"}
+{"query":"推荐几本讲算法的书"}
+{"query":"这个函数的时间复杂度是多少"}
+{"query":"帮我把数组去重并排序"}
+{"query":"写一个 shell 脚本批量重命名文件"}
+{"query":"SQL 里两张表怎么做 join"}
+{"query":"帮我把这张图压缩一下"}
+{"query":"总结一下这篇文章的主要观点"}
+{"query":"用 Python 写一个简单的贪吃蛇"}
+{"query":"给这段代码加上注释"}
+{"query":"如何提高英语口语"}
+{"query":"解释一下什么是哈希表"}
+{"query":"帮我把这个列表倒序输出"}
+{"query":"写一个函数计算斐波那契数列"}
+{"query":"如何配置 VS Code 的字体大小"}
+{"query":"帮我把 Markdown 转成 PDF"}
+{"query":"解释一下什么是递归"}
+{"query":"docker 镜像怎么减小体积"}
+{"query":"git rebase 和 merge 的区别"}
+{"query":"CI 里怎么并行跑多个测试"}
+{"query":"sqlite 怎么加索引优化查询"}
+{"query":"python 怎么读写 Excel 文件"}
+{"query":"虚拟机快照怎么管理"}
+{"query":"git 怎么撤销最近一次提交"}
+{"query":"SQL 里 HAVING 和 WHERE 的区别"}
+{"query":"docker 容器启动失败 端口被占用"}
+{"query":"git 仓库太大了 clone 很慢"}
+{"query":"缓存穿透怎么解决"}
+{"query":"数据库慢查询怎么排查"}
+{"query":"时区转换的代码怎么写"}
+{"query":"日志框架哪个好用"}
+{"query":"shell 循环遍历数组"}
+{"query":"docker 镜像分层原理是什么"}
+{"query":"git 分支管理最佳实践"}
+{"query":"CI/CD 里怎么实现蓝绿部署"}
+{"query":"mongodb 和关系型数据库的区别"}
+{"query":"shell 脚本入门教程"}
+{"query":"如何设计幂等 API"}
+{"query":"python 装饰器怎么用 写一个缓存装饰器"}
+{"query":"kubernetes 和 docker 的关系"}
+{"query":"react 组件怎么做单元测试"}
+{"query":"nginx 反向代理怎么配置"}
+{"query":"redis 和 memcached 的区别"}
+{"query":"TCP 三次握手的过程"}
+{"query":"微服务架构的优缺点"}
+{"query":"帮我看看这段代码有没有问题"}
+{"query":"怎么优化性能"}
+{"query":"这个报错是什么意思"}
+{"query":"怎么做自动化部署"}
+{"query":"帮我写一个二分查找"}
+{"query":"如何学习编程"}
+{"query":"推荐一个好用的编辑器"}

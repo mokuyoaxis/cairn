@@ -4,8 +4,8 @@ Three separate fixtures live here:
 
 ## 1. Retrieval / injection baseline
 
-- `queries.jsonl` — 24 positive queries (`query` + `expect` slug list).
-- `negatives.jsonl` — 25 unrelated queries.
+- `queries.jsonl` — 80 positive queries (`query` + `expect` slug list).
+- `negatives.jsonl` — 60 challenging negative queries (unrelated + domain-adjacent traps).
 - The library is `examples/entries/` (12 entries). Run with:
 
 ```bash
@@ -16,7 +16,7 @@ CAIRN_HOME="$TMP" python3 cairn.py eval
 ```
 
 `cairn eval` reports Recall and Injection separately. It is a regression
-baseline, not a benchmark.
+baseline, not a benchmark. Expanded from 24/25 to 80/60 in 2026-10-21.
 
 ## 2. Contract admission eval
 

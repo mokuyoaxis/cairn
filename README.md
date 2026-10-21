@@ -25,7 +25,7 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 | Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
 | Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, three gates |
 | Tests | 95 unit tests |
-| Evaluation | 24 positive + 25 negative queries on a 12-entry example library; contract admission fixture |
+| Evaluation | 80 positive + 60 negative queries on a 12-entry example library; contract admission fixture |
 | Latency | ~70 ms p95 for a cold hook process (single-machine sample) |
 | License | MIT © 2026 Messia |
 
