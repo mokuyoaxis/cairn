@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""cairn — 把相关经验端到 agent 面前，而不是提醒它去查。
-
-设计：无索引文件、无触发词（每轮检索 + 三道门）、注入卡片而非全文、
-零第三方依赖、零网络、2-gram BM25。条目格式与命令见 docs/usage.md。
-退出码：0 成功；1 校验/评测未过；2 用法错误。
-
-    cairn add|recall|show|lint|hook|eval|import|stats
-"""
+"""cairn — 把相关经验端到 agent 面前。"""
 from __future__ import annotations
 
 import argparse
@@ -33,7 +26,7 @@ ENTRIES = HOME / "entries"
 LOGDIR = HOME / "log"
 
 def data_home() -> Path:
-    """运行期再取一次，方便测试里改环境变量。"""
+    """运行期再取，方便测试改环境变量。"""
     return Path(os.environ.get("CAIRN_HOME") or (Path.home() / ".cairn")).expanduser()
 
 def entries_dir() -> Path:
@@ -69,13 +62,14 @@ NUL = b"\x00"
 DEFAULT_MIN_SCORE = 0.40    # 归一化分数下限
 DEFAULT_MIN_COVER = 0.20    # 命中的 query 词占比下限
 DEFAULT_MIN_MARGIN = 1.50   # 第一名相对第二名的领先倍数（歧义时不注入）
+STALE_DAYS = 180            # verified_at 超过该天数视为过期（lint 警告，不门控）
 MAX_CARDS = 3
 MAX_CARD_CHARS = 520          # ≈ 260 tokens（中文约 2 字符/token）
 
 
 # ── 分词 ────────────────────────────────────────────────────────────────
 def tokenize(text: str, keep_stop: bool = False) -> list:
-    """中文按 2-gram、英文按词切分；零依赖下最稳的近似，可加权、可排序。"""
+    """中文 2-gram、英文按词切分。"""
     if not text:
         return []
     out = []
@@ -93,7 +87,7 @@ def tokenize(text: str, keep_stop: bool = False) -> list:
 
 # ── 条目读写 ────────────────────────────────────────────────────────────
 def split_frontmatter(text: str):
-    """返回 (fm, body, error)。只解析顶层 key，不做 YAML。"""
+    """返回 (fm, body, error)。只解析顶层 key。"""
     if text.startswith("\ufeff"):
         text = text[1:]
     m = FM_RE.match(text)
@@ -109,7 +103,7 @@ def split_frontmatter(text: str):
     return fm, text[m.end():], None
 
 def read_entry(path: Path):
-    """返回 (entry_dict, error)。任何异常都转成 error 字符串，不抛。"""
+    """返回 (entry_dict, error)，不抛异常。"""
     try:
         raw = path.read_bytes()
     except OSError as exc:
@@ -138,7 +132,7 @@ def read_entry(path: Path):
     }, None
 
 def load_entries():
-    """返回 (entries, errors)。errors = [(filename, message)]。"""
+    """返回 (entries, errors)。"""
     entries, errors = [], []
     d = entries_dir()
     if not d.is_dir():
@@ -219,7 +213,7 @@ class Index:
 _INDEX = None
 
 def _to_plain(idx: "Index") -> dict:
-    """Counter → 普通 dict。pickle 反序列化 Counter 慢 4 倍（实测 109ms vs 26ms）。"""
+    """Counter → 普通 dict，pickle 反序列化快 4 倍。"""
     return {
         "docs": [{"name": d["name"], "path": d["path"], "summary": d["summary"],
                   "kind": d["kind"], "status": d["status"], "trust": d["trust"],
@@ -238,7 +232,7 @@ def _from_plain(data: dict) -> "Index":
     return idx
 
 def _file_sig():
-    """(文件名, mtime_ns, size) 列表：索引缓存的有效性判据。"""
+    """(文件名, mtime_ns, size) 列表，缓存有效性判据。"""
     d = entries_dir()
     if not d.is_dir():
         return []
@@ -255,7 +249,7 @@ def _cache_file() -> Path:
     return data_home() / "cache" / "index.pkl"
 
 def get_index(force: bool = False) -> Index:
-    """优先读缓存；失效判据是全部文件的 (mtime, size)，原地保存也能发现。"""
+    """优先读缓存；失效判据是全部文件的 (mtime, size)。"""
     global _INDEX
     if _INDEX is not None and not force:
         return _INDEX
@@ -293,13 +287,13 @@ def _fingerprint(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()[:12]
 
 def _redact(text: str) -> str:
-    """对任意文本套用脱敏规则；sanitize / 日志预览 / stats 共用。"""
+    """对文本套用脱敏规则。"""
     for pat, repl in _REDACT:
         text = pat.sub(repl, text)
     return text
 
 def _mask_sample(value) -> str:
-    """审计输出不回显完整敏感值；先脱敏，再对长样本做首尾遮蔽。"""
+    """脱敏 + 长样本首尾遮蔽。"""
     text = _redact(str(value))
     return text if len(text) <= 24 else text[:10] + "…" + text[-6:]
 
@@ -377,7 +371,7 @@ def render_cards(hits, max_chars: int = MAX_CARD_CHARS) -> str:
     return "\n".join(lines)
 
 def contract_reason(doc) -> str:
-    """不可自动注入的原因；可注入时返回空串。"""
+    """不可注入的原因；可注入时返回空串。"""
     if doc.get("status") != "active":
         return f"status={doc.get('status')}"
     if doc.get("trust") != "verified":
@@ -389,16 +383,15 @@ def contract_reason(doc) -> str:
     return ""
 
 def is_injectable(doc) -> bool:
-    """Contract v0: active + verified + source + verified_at。"""
+    """Contract v0 准入。"""
     return not contract_reason(doc)
 
 def gate(results, min_score: float = DEFAULT_MIN_SCORE,
          min_cover: float = DEFAULT_MIN_COVER,
          min_margin: float = DEFAULT_MIN_MARGIN,
          max_cards: int = MAX_CARDS, q_len: int = 0, report=None):
-    """契约准入 + 三道门：分数、覆盖率、领先幅度。
+    """契约准入 + 三道门：分数、覆盖率、领先幅度（第一名/第二名）。
 
-    覆盖率 = 命中词数 / query 词数；领先幅度 = 第一名 / 第二名。
     report 非 None 时追加 (候选, 原因)，explain 与 hook 共用同一套判断。
     """
     def note(rows, why):
@@ -440,7 +433,7 @@ def emit(text: str, fmt: str) -> None:
     sys.stdout.flush()
 
 def extract_prompt(data) -> str:
-    """从平台 stdin 里挖出用户 prompt，兼容几种常见嵌套。"""
+    """从平台 stdin 里挖出用户 prompt。"""
     if not isinstance(data, dict):
         return ""
     for key in ("prompt", "user_prompt", "userPrompt", "message", "content", "text"):
@@ -477,7 +470,7 @@ def cmd_recall(args) -> int:
     return 0
 
 def cmd_explain(args) -> int:
-    """解释一次检索的候选/分数/契约/门控；只读，不写日志与会话状态。"""
+    """解释检索的候选/分数/契约/门控；只读。"""
     idx = get_index()
     qn = len(tokenize(args.query))
     report = []
@@ -584,7 +577,7 @@ def cmd_ls(args) -> int:
     return 0
 
 def check_entry(e, filename: str):
-    """单条目检查，返回 (errors, warnings)。warnings 不影响退出码。"""
+    """单条目检查，返回 (errors, warnings)。"""
     problems, warnings = [], []
     fm = e["fm"]
     missing = [k for k in REQUIRED if not fm.get(k)]
@@ -609,6 +602,13 @@ def check_entry(e, filename: str):
         problems.append("trust=verified 需要 source 与有效 verified_at")
     if not is_injectable(e):
         warnings.append("不会自动注入（需 active+verified+source+verified_at）")
+    if DATE_RE.match(e["verified_at"] or ""):
+        try:
+            age = (date.today() - date.fromisoformat(e["verified_at"])).days
+        except ValueError:
+            age = 0
+        if age > STALE_DAYS:
+            warnings.append(f"verified_at 已过期 {age} 天（>{STALE_DAYS} 天），建议重新验证")
     if len(e["summary"]) > 200:
         warnings.append(f"summary 过长（{len(e['summary'])} > 200 字符）")
     if len(e["body"].splitlines()) > 80:
@@ -645,6 +645,13 @@ def cmd_lint(args) -> int:
     for slug, n in seen_slugs.items():
         if n > 1:
             problems.append(f"重文件：{slug}.md 出现 {n} 次")
+    scope_map = {}
+    for e in entries:
+        for tag in [t.strip() for t in (e["scope"] or "").split(",") if t.strip()]:
+            scope_map.setdefault(tag, []).append(e["name"])
+    for tag, names in scope_map.items():
+        if len(names) > 3:
+            warnings.append(f"scope '{tag}' 下有 {len(names)} 条，注意潜在冲突：{', '.join(sorted(names))}")
     for e in entries:
         for m in LINK_RE.finditer(e["body"] + e["summary"]):
             target = m.group(1).strip()
@@ -659,15 +666,12 @@ def cmd_lint(args) -> int:
     return 1 if problems else 0
 
 def _slugify(stem: str) -> str:
-    """文件名 → kebab-case；纯非 ASCII 时退化为稳定哈希后缀。"""
+    """文件名 → kebab-case。"""
     slug = re.sub(r"[^a-z0-9]+", "-", stem.lower()).strip("-")
     return slug or "entry-" + hashlib.sha1(stem.encode("utf-8")).hexdigest()[:8]
 
 def cmd_import(args) -> int:
-    """导入任意 markdown 目录：只认 frontmatter，字段归一，默认 quarantine。
-
-    文件名转 kebab-case；导入后自动跑 lint，避免留下脏库。
-    """
+    """导入 markdown 目录：只认 frontmatter，默认 quarantine。"""
     src = Path(args.src).expanduser()
     if not src.is_dir():
         print(f"[FAIL] 目录不存在：{src}", file=sys.stderr)
@@ -734,7 +738,7 @@ def cmd_import(args) -> int:
     return 0 if args.dry_run else cmd_lint(args)
 
 def cmd_prune_links(args) -> int:
-    """删除指向不存在条目的 [[双链]]；宁可删链接也不放宽 lint。"""
+    """删除指向不存在条目的 [[双链]]。"""
     entries, _ = load_entries()
     slugs = {e["slug"] for e in entries} | {e["name"] for e in entries}
     changed = 0
@@ -831,7 +835,7 @@ _REDACT = (
 )
 
 def _atomic_write_text(path: Path, text: str) -> None:
-    """先写同目录临时文件，再原子替换；失败不留下半截目标文件。"""
+    """先写临时文件，再原子替换。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
     try:
@@ -847,7 +851,7 @@ def _atomic_write_text(path: Path, text: str) -> None:
                 pass
 
 def cmd_sanitize(args) -> int:
-    """复制一份并替换可识别信息，原库不动；默认不覆盖，先读后原子写。"""
+    """复制并替换可识别信息；默认不覆盖。"""
     source_dir = entries_dir().resolve()
     out = Path(args.out).expanduser().resolve()
     if out == source_dir or out.is_relative_to(source_dir):
@@ -905,7 +909,7 @@ def cmd_sanitize(args) -> int:
     return 0
 
 def _audit_files():
-    """Cairn 管理的持久化数据：entries + log/session + 派生 cache。"""
+    """持久化数据：entries + log/session + cache。"""
     d, ld = entries_dir(), log_dir()
     files = [(f"entries/{p.name}", p) for p in sorted(d.glob("*.md"))] if d.is_dir() else []
     if ld.is_dir():

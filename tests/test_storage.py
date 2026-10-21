@@ -90,6 +90,58 @@ class TestAddAndLint(Base):
         self.write("linker", body="关联 [[target-entry]]")
         self.assertEqual(cairn.main(["lint"]), 0)
 
+    def test_lint_warns_stale_verified_at(self):
+        self.write("stale-entry", verified_at="2019-01-01")
+        buf = io.StringIO()
+        old = sys.stdout
+        sys.stdout = buf
+        try:
+            rc = cairn.main(["lint"])
+        finally:
+            sys.stdout = old
+        self.assertEqual(rc, 0)
+        self.assertIn("verified_at 已过期", buf.getvalue())
+
+    def test_lint_fresh_verified_at_no_stale_warning(self):
+        self.write("fresh-entry", verified_at="2026-10-20")
+        buf = io.StringIO()
+        old = sys.stdout
+        sys.stdout = buf
+        try:
+            rc = cairn.main(["lint"])
+        finally:
+            sys.stdout = old
+        self.assertEqual(rc, 0)
+        self.assertNotIn("已过期", buf.getvalue())
+
+    def test_lint_warns_scope_conflict(self):
+        for i in range(4):
+            self.write(f"scope-item-{i}", summary=f"alpha beta gamma {i}",
+                       scope="docker")
+        buf = io.StringIO()
+        old = sys.stdout
+        sys.stdout = buf
+        try:
+            rc = cairn.main(["lint"])
+        finally:
+            sys.stdout = old
+        self.assertEqual(rc, 0)
+        self.assertIn("scope 'docker' 下有 4 条", buf.getvalue())
+
+    def test_lint_no_scope_conflict_at_threshold(self):
+        for i in range(3):
+            self.write(f"scope-item-{i}", summary=f"alpha beta gamma {i}",
+                       scope="docker")
+        buf = io.StringIO()
+        old = sys.stdout
+        sys.stdout = buf
+        try:
+            rc = cairn.main(["lint"])
+        finally:
+            sys.stdout = old
+        self.assertEqual(rc, 0)
+        self.assertNotIn("潜在冲突", buf.getvalue())
+
     def test_unknown_field_is_warning_only(self):
         text = self.write("extra-field").replace("---\n\n", "type: old\n---\n\n")
         (self.home / "entries" / "extra-field.md").write_text(text, encoding="utf-8")
