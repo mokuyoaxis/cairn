@@ -113,3 +113,68 @@ jobs:
               assert (needle % version) in text, (name, needle % version)
           print("version consistent:", version)
           PY
+
+      # Numbers in the docs are claims. Every measured figure must appear, no
+      # labelled figure may contradict the measurement, and the eval-set table
+      # must equal the fixture line counts. Values are compared numerically so
+      # "100%" and "100.0%" are not treated as a contradiction.
+      - name: Docs metrics match eval output
+        run: |
+          python - <<'PY'
+          import os, pathlib, re, shutil, subprocess, sys, tempfile
+
+          work = tempfile.mkdtemp()
+          home = os.path.join(work, "home")
+          shutil.copytree("examples", home)
+          env = dict(os.environ, CAIRN_HOME=home, PYTHONDONTWRITEBYTECODE="1")
+          out = subprocess.run([sys.executable or "python3", "cairn.py", "eval"],
+                               capture_output=True, text=True, env=env, check=True).stdout
+          shutil.rmtree(work, ignore_errors=True)
+
+          def grab(pattern):
+              match = re.search(pattern, out)
+              assert match, "eval output changed shape: %r" % pattern
+              return float(match.group(1))
+
+          pos, neg = int(grab(r"正例 (\d+) 条")), int(grab(r"负例 (\d+) 条"))
+          truth = {"召回@1": grab(r"召回@1 ([\d.]+)%"),
+                   "召回@3": grab(r"召回@3 ([\d.]+)%"),
+                   "注入@1": grab(r"注入@1 ([\d.]+)%"),
+                   "注入@3": grab(r"注入@3 ([\d.]+)%"),
+                   "误触发": grab(r"误触发 ([\d.]+)%")}
+
+          docs = {name: pathlib.Path(name).read_text(encoding="utf-8")
+                  for name in ("README.md", "docs/evaluation.md", "docs/development.md")}
+          problems = []
+          percent = re.compile(r"([\d.]+)%")
+          labelled = re.compile(r"(召回@[13]|注入@[13]|误触发)[^\d\n]{0,12}?(?<![≥≤<>])([\d.]+)%")
+
+          for name, text in docs.items():
+              mentioned = [float(v) for v in percent.findall(text)]
+              for label, value in truth.items():
+                  if not any(abs(v - value) < 0.05 for v in mentioned):
+                      problems.append("%s: never states %s = %g%% (docs look stale)"
+                                      % (name, label, value))
+              for match in labelled.finditer(text):
+                  label, value = match.group(1), float(match.group(2))
+                  if label in truth and abs(value - truth[label]) >= 0.05:
+                      problems.append("%s: states %s = %g%% but eval measures %g%%"
+                                      % (name, label, value, truth[label]))
+
+          for row, count in (("eval/queries.jsonl", pos), ("eval/negatives.jsonl", neg)):
+              line = [l for l in docs["docs/evaluation.md"].splitlines() if row in l]
+              if not line or not line[0].rstrip().endswith("| %d |" % count):
+                  problems.append("docs/evaluation.md: %s row is not %d" % (row, count))
+
+          for name, count in (("queries.jsonl", pos), ("negatives.jsonl", neg)):
+              real = len(pathlib.Path("eval/" + name).read_text(encoding="utf-8").splitlines())
+              if real != count:
+                  problems.append("eval prints %d for %s but the file holds %d" % (count, name, real))
+
+          if problems:
+              for problem in problems:
+                  print("::error::" + problem)
+              sys.exit(1)
+          print("docs metrics ok: %d + %d cases; %s" % (pos, neg,
+                ", ".join("%s %g%%" % (k, v) for k, v in sorted(truth.items()))))
+          PY

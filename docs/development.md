@@ -102,8 +102,16 @@ python3 eval/contract_eval.py
 | contract eval | `python eval/contract_eval.py`，混合信任 fixture 的准入与沉默 |
 | trust eval | `python eval/trust_eval.py`，恶意/过期/scope/冲突/沉默；已知缺口如实报告 |
 | audit | entries + log/session + cache |
+| research fixtures | 离线 harness：`schema_check` + 5 个 harness；断言 phase3 与核心 `gate()` 一致（18 个配置） |
+| AST 3.9 | 全仓 `*.py` 按 3.9 语法解析（含单元测试未 import 的研究脚本） |
+| version consistency | `VERSION` == `cairn --version`，且 README / README.zh-CN / docs / CHANGELOG 含同一版本串 |
+| docs metrics | 文档中的实测数字必须等于 `cairn eval` 的实际输出，评测集表必须等于 fixture 行数（防文档漂移） |
 
 CI 不安装第三方依赖；没有网络调用。README 顶部的 CI badge 指向该 workflow。
+
+发版走单独的 [.github/workflows/release.yml](../.github/workflows/release.yml)：推送 `v*` tag 时用
+`GITHUB_TOKEN` 创建 GitHub Release，正文取自 `docs/release-notes/<tag>.md`（英文为主 + 中文摘要），
+tag 必须等于 `v` + `VERSION`，否则 workflow 直接失败。
 
 ## 3. 核心约束
 
