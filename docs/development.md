@@ -6,7 +6,7 @@
 
 ## 0. 摘要
 
-- 121 项单元测试；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + contract eval + trust eval + audit。
+- 224 项单元测试（121 核心 + 103 研究夹具）；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + contract eval + trust eval + audit。
 - 核心 `cairn.py` 1198 行，零第三方依赖。
 - 单文件核心；控制台/旁路必须独立。
 - Experience Contract v0 与统一 Recall/Explain 已实现；近期优先 Trust & Applicability Eval；控制台暂缓。
@@ -29,8 +29,8 @@ cairn/
 │   ├── security.md        # 安全与发布检查
 │   └── development.md     # 本文件
 ├── eval/
-│   ├── queries.jsonl      # 24 条正例
-│   ├── negatives.jsonl    # 25 条负例
+│   ├── queries.jsonl      # 80 条正例
+│   ├── negatives.jsonl    # 60 条负例
 │   ├── contract/entries/  # 混合信任 fixture（7 条）
 │   ├── contract_cases.jsonl
 │   ├── contract_eval.py   # 契约准入最小切片
@@ -50,7 +50,7 @@ cairn/
     ├── test_eval.py
     ├── test_explain.py
     ├── test_scope.py      # scope 门控（声明/未声明/缓存兼容）
-    └── test_cli.py        # 共 121 项单元测试
+    └── test_cli.py        # 共 224 项单元测试（121 核心 + 103 研究夹具）
 ```
 
 维护者本地材料默认由 ignore 规则排除，不随仓库发布，也不作为公开文档的依据。
@@ -72,15 +72,15 @@ CAIRN_HOME="$TMP" python3 cairn.py audit
 python3 eval/contract_eval.py
 ```
 
-当前基线（2026-10-20）：
+当前基线（2026-10-25）：
 
-- 121 项测试全绿；
+- 224 项测试全绿；
 - 12 条示例，lint 通过（全部为 `active + verified + source + verified_at` 的 fixture 条目）；
-- 24+25 评测：召回@1 91.7% / @3 100%，注入@1/@3 75%，误触发 4.0%；
+- 80+60 评测：召回@1 93.8% / @3 100%，注入@1/@3 72.5%，误触发 3.3%；
 - 契约准入 eval：3/3 cases（verified 注入；unverified/quarantine/deprecated/archived 沉默）；
-- Trust & Applicability eval：10 cases；正控 2/2、负例 3/3 沉默、恶意正文泄露 0/1；
+- Trust & Applicability eval：13 cases；正控 2/2、负例 3/3 沉默、恶意正文泄露 0/1、显式 scope 门控 3/3；
   过期/scope/冲突/恶意 summary 4 个已知缺口，`--strict` 可将其计为失败；
-- 平均注入 145 字符/query（未注入计 0），实际注入 18/24 次、194 字符/次；
+- 平均注入 136 字符/query（未注入计 0），实际注入 58/80 次、188 字符/次；
 - `cairn.py` 1198 行，零第三方依赖；
 - hook 冷启动 p95 约 70ms（本机样本）。
 
@@ -191,7 +191,7 @@ python3 cairn.py lint
 - **Contract admission eval 最小切片**：`eval/contract_eval.py` 覆盖
   verified/unverified/quarantine/deprecated/archived 的准入与正确沉默；
 - **测试按域拆分**：`tests/test_*.py` + `tests/support.py`；补 CLI/eval/explain 覆盖，
-  共 121 项；
+  共 224 项；
 - **统一 Recall / Explain**：`gate()` 增加可选 `report`，`cairn explain` 与
   recall/hook 共用契约准入、三道门与拒绝理由；只读，不写日志/会话。
 

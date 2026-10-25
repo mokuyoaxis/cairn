@@ -20,12 +20,12 @@ Cairn 是一个本地优先、确定性的 **Experience Retrieval Layer（经验
 
 | 项目 | 内容 |
 |---|---|
-| 状态 | `v0.1.0-alpha` Internal Alpha |
+| 状态 | `v0.1.0` — 首个实验性稳定基线（已冻结） |
 | 核心 | `cairn.py`，1198 行，零第三方依赖 |
 | 存储 | 带 Experience Contract v0 元数据的本地 Markdown 条目；缓存可重建 |
 | 检索 | 中文 2-gram + 英文词元，BM25，契约准入 + 声明式 scope 过滤 + 三道门 |
-| 测试 | 121 项单元测试 |
-| 评测 | 12 条示例库上的 80 条正例 + 60 条负例；另有契约准入 fixture |
+| 测试 | 224 项（121 核心 + 103 研究夹具） |
+| 评测 | 12 条种子库上的 80 条正例 + 60 条负例；另有契约准入与信任夹具 |
 | 延迟 | 冷启动 hook p95 约 70ms（单机样本） |
 | 许可证 | MIT © 2026 Messia |
 
@@ -142,15 +142,15 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 | 指标 | 数值 |
 |---|---|
-| 单元测试 | 121 项通过 |
+| 单元测试 | 224 项通过（121 核心 + 103 研究夹具） |
 | 示例库 | 12 条 |
-| 评测集 | 24 条正例 + 25 条负例 |
-| 召回@1 / @3 | 91.7% / 100% |
-| 注入@1 / @3 | 75% / 75% |
-| 误触发 | 4.0% |
+| 评测集 | 80 条正例 + 60 条负例 |
+| 召回@1 / @3 | 93.8% / 100% |
+| 注入@1 / @3 | 72.5% / 72.5% |
+| 误触发 | 3.3%（2/60 负例） |
 | 契约准入 eval | 3/3 cases |
 | Trust & Applicability eval | 13 cases；显式 scope 门控 3/3；4 个已知缺口 |
-| 平均注入（每 query / 每次注入） | 145 / 194 字符 |
+| 平均注入（每 query / 每次注入） | 136 / 188 字符 |
 | Hook p95 | 约 70ms（单机样本） |
 
 这些数字是**回归基线**，不是 benchmark。评测集很小，阈值是手工定的；Recall@3 100% 不代表经验真的被注入。
@@ -168,6 +168,10 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 平均注入长度同时按「每 query（未注入计 0）」与「每次实际注入」报告。它是诊断指标，不是成本承诺；详见 [docs/evaluation.md](docs/evaluation.md)。
 
+**研究状态**：曾尝试用诊断式适用性判断门控注入，四轮研究后**归档为 NO-GO**（当前宿主契约下）；
+离线原型保留在 `eval/`，不属于运行时。详见
+[研究总结](docs/research/taxonomy-feasibility-2026.md)。
+
 ---
 
 ## 路线图
@@ -177,11 +181,14 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 - Phase 0 正确性修复、首个 Git 基线与 **Experience Contract v0** 已完成；
 - **Recall / Explain** 已共用同一套准入与门控；`cairn explain` 输出逐条拒绝理由，不改变 Hook 行为；
 - 已加 **contract-admission eval** 与 **Trust & Applicability Eval v0**；显式 scope 不匹配已门控并测量，过期、未声明 scope、冲突注入仍只测量不门控；
-- 在声称用户收益前，先做真实任务评测。
+- 在声称用户收益前，先做真实任务评测；
+- **诊断式适用性门控已研究并归档为 NO-GO**（当前宿主契约下），见
+  [研究总结](docs/research/taxonomy-feasibility-2026.md)。除非宿主能提供可信的项目级事实，
+  或真实使用数据显示适用性失败值得额外复杂度，否则不再重启。
 
 之后：
 
-- `cairn calibrate`、80+ 评测集、别名表；
+- `cairn calibrate`、别名表（评测集已是 80/60）；
 - 显式提议 + 人工审核的捕获流程；
 - 可选的 Git 共享。
 
@@ -202,6 +209,8 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 - [docs/evaluation.md](docs/evaluation.md) — 指标、当前结果、评测方法与局限
 - [docs/security.md](docs/security.md) — 信任边界、隐私、audit/sanitize、发布检查
 - [docs/development.md](docs/development.md) — 目录、测试、约束、贡献流程
+- [docs/research/taxonomy-feasibility-2026.md](docs/research/taxonomy-feasibility-2026.md) — 适用性门控为何归档（研究总结）
+- [CHANGELOG.md](CHANGELOG.md) — 发布说明与已知限制
 
 ---
 

@@ -20,12 +20,12 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 
 | Item | Value |
 |---|---|
-| Status | `v0.1.0-alpha` Internal Alpha |
+| Status | `v0.1.0` — first experimental stable baseline (frozen) |
 | Core | `cairn.py`, 1198 lines, zero third-party dependencies |
 | Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
 | Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, declared-scope filter, three gates |
-| Tests | 121 unit tests |
-| Evaluation | 80 positive + 60 negative queries on a 12-entry example library; contract admission fixture |
+| Tests | 224 (121 core + 103 research fixtures) |
+| Evaluation | 80 positive + 60 negative queries on a 12-entry seed library; contract-admission and trust fixtures |
 | Latency | ~70 ms p95 for a cold hook process (single-machine sample) |
 | License | MIT © 2026 Messia |
 
@@ -103,8 +103,8 @@ Cairn returns cards, not documents. If nothing passes the gates, it stays silent
 3. **Admit.** Only entries with `status: active`, `trust: verified`, a non-empty `source`, and a valid `verified_at` may be injected. Imported entries start as `quarantined`.
 4. **Scope filter.** If the caller declares a context scope (`--scope` / `CAIRN_SCOPE`), entries whose `scope` does not intersect it are dropped as `out_of_scope`. Untagged entries stay universal; with no declared scope, behavior is unchanged.
 5. **Gate.** A candidate must pass three independent gates: normalized score, query-term coverage, and a margin over the second candidate.
-5. **Deduplicate.** The same card is injected at most once per session.
-6. **Render.** At most three cards, name + summary + path. Full text is fetched explicitly.
+6. **Deduplicate.** The same card is injected at most once per session.
+7. **Render.** At most three cards, name + summary + path. Full text is fetched explicitly.
 
 The runtime is read-only. Retrieval, statistics, and validation make no network calls. `cairn explain` runs the same admission and gate pipeline and prints why each candidate was injected or refused.
 
@@ -143,15 +143,15 @@ See [docs/security.md](docs/security.md) for the threat model and release checkl
 
 | Metric | Value |
 |---|---|
-| Unit tests | 121 passing |
+| Unit tests | 224 passing (121 core + 103 research fixtures) |
 | Seed library | 12 entries |
-| Evaluation set | 24 positive + 25 negative queries |
-| Recall@1 / @3 | 91.7% / 100% |
-| Injection@1 / @3 | 75% / 75% |
-| False injection rate | 4.0% |
+| Evaluation set | 80 positive + 60 negative queries |
+| Recall@1 / @3 | 93.8% / 100% |
+| Injection@1 / @3 | 72.5% / 72.5% |
+| False injection rate | 3.3% (2/60 negatives) |
 | Contract admission eval | 3/3 cases |
 | Trust & applicability eval | 13 cases; declared-scope gating 3/3; 4 known gaps |
-| Avg injection (per query / per injection) | 145 / 194 chars |
+| Avg injection (per query / per injection) | 136 / 188 chars |
 | Hook p95 | ~70 ms (single-machine sample) |
 
 These numbers are a **regression baseline**, not a benchmark. The evaluation set is small, thresholds are manual, and a 100% Recall@3 does not mean an experience was injected.
@@ -169,6 +169,11 @@ Known limitations:
 
 Injection length is reported both per query (a no-hit query counts as zero) and per actual injection. It is a diagnostic, not a cost guarantee; see [docs/evaluation.md](docs/evaluation.md).
 
+**Research status:** an attempt to gate injection on diagnostic-style applicability was studied in four
+phases and **archived as NO-GO** under the current host contract; the offline prototypes remain in
+`eval/` but are not part of the runtime. Summary:
+[docs/research/taxonomy-feasibility-2026.md](docs/research/taxonomy-feasibility-2026.md).
+
 ---
 
 ## Roadmap
@@ -178,11 +183,15 @@ Near-term work is about **contracts, trust, and measurement**, not feature count
 - Phase 0 correctness fixes, the first Git baseline, and **Experience Contract v0** are complete;
 - **Recall / Explain** now share one admission/gate pipeline; `cairn explain` reports per-candidate refusal reasons without changing hook behavior;
 - a **contract-admission eval** and **Trust & Applicability Eval v0** are in place; declared-scope mismatch is gated and measured, while stale, undeclared-scope, and conflicting injection are measured but not yet gated;
-- add real-task evaluation before claiming user benefit.
+- add real-task evaluation before claiming user benefit;
+- **diagnostic-style applicability gating was studied and archived as NO-GO** for the current
+  host contract; see [docs/research/taxonomy-feasibility-2026.md](docs/research/taxonomy-feasibility-2026.md).
+  It will not be revisited unless the host can supply trusted project-level facts, or real usage shows
+  applicability failures worth the extra complexity.
 
 Later:
 
-- `cairn calibrate`, an 80+ query evaluation set, and alias tables;
+- `cairn calibrate` and alias tables (the evaluation set is already at 80/60 queries);
 - a capture workflow with explicit proposals and human review;
 - optional Git-based sharing.
 
@@ -203,6 +212,8 @@ Technical documentation is currently written in Simplified Chinese:
 - [docs/evaluation.md](docs/evaluation.md) — metrics, current results, methodology, limitations
 - [docs/security.md](docs/security.md) — trust boundaries, privacy, audit/sanitize, release checklist
 - [docs/development.md](docs/development.md) — layout, tests, constraints, contribution workflow
+- [docs/research/taxonomy-feasibility-2026.md](docs/research/taxonomy-feasibility-2026.md) — why applicability gating is archived (research summary, Chinese)
+- [CHANGELOG.md](CHANGELOG.md) — release notes and known limitations
 
 ---
 
