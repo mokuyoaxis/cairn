@@ -1,0 +1,66 @@
+name: Release
+
+# Publishing a release is a tag-triggered, auditable action:
+# the body comes from a versioned file (docs/release-notes/<tag>.md),
+# never from someone's clipboard at publish time.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag, version and notes
+        id: meta
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          case "$tag" in
+            v*) ;;
+            *) echo "::error::not a version tag: $tag"; exit 1 ;;
+          esac
+          version="$(python3 -c "import pathlib,re;print(re.search(r'VERSION = \"([^\"]+)\"', pathlib.Path('cairn.py').read_text(encoding='utf-8')).group(1))")"
+          if [ "$tag" != "v$version" ]; then
+            echo "::error::tag $tag does not match VERSION $version (cairn.py)"
+            exit 1
+          fi
+          notes="docs/release-notes/${tag}.md"
+          if [ ! -f "$notes" ]; then
+            echo "::error::missing release notes: $notes"
+            exit 1
+          fi
+          title="$(head -1 "$notes" | sed 's/^# *//')"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "notes=$notes" >> "$GITHUB_OUTPUT"
+          echo "title=$title" >> "$GITHUB_OUTPUT"
+          echo "publishing $tag from $notes"
+
+      - name: Create release if absent
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          notes="${{ steps.meta.outputs.notes }}"
+          title="${{ steps.meta.outputs.title }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release $tag already exists; leaving it untouched"
+            exit 0
+          fi
+          gh release create "$tag" \
+            --verify-tag \
+            --title "$title" \
+            --notes-file "$notes"

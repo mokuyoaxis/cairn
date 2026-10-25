@@ -6,6 +6,7 @@ version numbers follow semver, with an explicit *experimental* label while the p
 ## [0.1.0] — 2026-10-25 — First experimental stable baseline
 
 First frozen baseline: behaviour, contract and test set are now fixed for real-world trial.
+Published release notes (English with a Chinese summary): [`docs/release-notes/v0.1.0.md`](docs/release-notes/v0.1.0.md).
 This is **experimental software** — read *Known limitations* before relying on it.
 
 ### Added

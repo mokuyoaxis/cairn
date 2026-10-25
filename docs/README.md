@@ -16,6 +16,7 @@
 | [security.md](security.md) | 信任边界、日志隐私、audit/sanitize、注入风险、发布检查 | 维护者/安全审查 |
 | [development.md](development.md) | 目录、测试、基线复现、CI、编码约束、贡献流程 | 贡献者 |
 | [research/taxonomy-feasibility-2026.md](research/taxonomy-feasibility-2026.md) | 诊断式适用性门控四轮研究总结与 NO-GO 决策 | 想知道"为什么没做这个功能"的人 |
+| [release-notes/v0.1.0.md](release-notes/v0.1.0.md) | v0.1.0 发布说明（英文为主 + 中文摘要），由 Release workflow 发布 | 想了解本版本做了什么/没做什么的人 |
 
 ## 阅读顺序
 
