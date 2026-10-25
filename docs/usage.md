@@ -145,6 +145,9 @@ python3 cairn.py explain "..."               # 解释候选、分数与拒绝理
 - 没有条目过门时输出 `[无相关条目]`，退出码 1；
 - `--raw` 绕过契约与门控，显示所有候选、分数及 `[status/trust]`，用于调试和复核；
 - `--min-score` / `--min-cover` / `--min-margin` 可临时调整三道门。
+- `--scope docker,security`（或环境变量 `CAIRN_SCOPE`）声明当前工作上下文；
+  条目 `scope` 与该声明无交集时**不注入**，理由记为 `out_of_scope`。
+  条目没有 `scope` 视为通用经验，任何声明下都可注入；不声明则行为与之前完全一致。
 
 `explain` 与 `recall` / `hook` 共用同一套候选与门控，逐条打印：
 
@@ -332,7 +335,7 @@ python3 /path/to/cairn/cairn.py hook --format codex <<<'{"prompt":"...","session
 
 **有条目命中了，但仍不注入。**
 
-先跑 `cairn explain "..."` 看具体拒绝理由（`ineligible` / `low_score` / `low_cover` / `low_margin` / `over_limit`），再跑 `lint` 看 `[warn] 不会自动注入`，或 `recall "..." --raw` 看 `[status/trust]`。补 `source`、`verified_at`，并把 `trust` 改为 `verified`；导入条目默认是 `quarantined`。不要直接把 `trust` 改成 `verified` 而不做复核。
+先跑 `cairn explain "..."` 看具体拒绝理由（`ineligible` / `out_of_scope` / `low_score` / `low_cover` / `low_margin` / `over_limit`），再跑 `lint` 看 `[warn] 不会自动注入`，或 `recall "..." --raw` 看 `[status/trust]`。补 `source`、`verified_at`，并把 `trust` 改为 `verified`；导入条目默认是 `quarantined`。不要直接把 `trust` 改成 `verified` 而不做复核。
 
 **`lint`/`audit` 显示 `0 条` 并 FAIL。**
 

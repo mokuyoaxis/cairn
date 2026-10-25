@@ -223,7 +223,8 @@ CAIRN_HOME=/tmp/cairn-clean python3 cairn.py audit
 - 经验库没有签名/来源验证机制；`verified` 只是自我声明；
 - 没有恶意经验测试集；
 - `status` 已可表达 deprecated/archived，但没有 feedback 驱动的生命周期管理；
-- `scope` 尚未参与门控，`verified_at` 不自动过期，冲突检测未实现；
+- `scope` 仅在调用方显式声明（`--scope` / `CAIRN_SCOPE`）时参与门控，不从 query 推断；
+  `verified_at` 不自动过期（仅 lint 警告），冲突检测未实现；
 - 没有对 Hook 宿主协议的跨平台端到端安全测试；
 - 第三方参考材料的许可证/署名义务尚未完成发布前核对。
 

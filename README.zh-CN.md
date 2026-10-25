@@ -20,11 +20,11 @@ Cairn 是一个本地优先、确定性的 **Experience Retrieval Layer（经验
 
 | 项目 | 内容 |
 |---|---|
-| 状态 | `v0.1.0` Internal Alpha |
-| 核心 | `cairn.py`，1195 行，零第三方依赖 |
+| 状态 | `v0.1.0-alpha` Internal Alpha |
+| 核心 | `cairn.py`，1198 行，零第三方依赖 |
 | 存储 | 带 Experience Contract v0 元数据的本地 Markdown 条目；缓存可重建 |
-| 检索 | 中文 2-gram + 英文词元，BM25，契约准入 + 三道门 |
-| 测试 | 109 项单元测试 |
+| 检索 | 中文 2-gram + 英文词元，BM25，契约准入 + 声明式 scope 过滤 + 三道门 |
+| 测试 | 121 项单元测试 |
 | 评测 | 12 条示例库上的 80 条正例 + 60 条负例；另有契约准入 fixture |
 | 延迟 | 冷启动 hook p95 约 70ms（单机样本） |
 | 许可证 | MIT © 2026 Messia |
@@ -142,14 +142,14 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 | 指标 | 数值 |
 |---|---|
-| 单元测试 | 109 项通过 |
+| 单元测试 | 121 项通过 |
 | 示例库 | 12 条 |
 | 评测集 | 24 条正例 + 25 条负例 |
 | 召回@1 / @3 | 91.7% / 100% |
 | 注入@1 / @3 | 75% / 75% |
 | 误触发 | 4.0% |
 | 契约准入 eval | 3/3 cases |
-| Trust & Applicability eval | 10 cases；4 个已知缺口 |
+| Trust & Applicability eval | 13 cases；显式 scope 门控 3/3；4 个已知缺口 |
 | 平均注入（每 query / 每次注入） | 145 / 194 字符 |
 | Hook p95 | 约 70ms（单机样本） |
 
@@ -163,7 +163,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 - 2-gram 对很短 query 较粗；
 - 没有捕获闭环；`add` 是手动的；
 - `import` 会把文件名归一为 kebab-case 并自动跑 `lint`，但只解析顶层标量 frontmatter，不解析嵌套 YAML；
-- Experience Contract v0 是元数据，不是加密证明；`scope` 尚未参与准入，`verified_at` 不会自动过期，冲突检测未实现；
+- Experience Contract v0 是元数据，不是加密证明；`scope` 仅在调用方显式声明时才门控（不从 query 推断），`verified_at` 不会自动过期，冲突检测未实现；
 - 技术文档目前为简体中文。
 
 平均注入长度同时按「每 query（未注入计 0）」与「每次实际注入」报告。它是诊断指标，不是成本承诺；详见 [docs/evaluation.md](docs/evaluation.md)。
@@ -176,7 +176,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 - Phase 0 正确性修复、首个 Git 基线与 **Experience Contract v0** 已完成；
 - **Recall / Explain** 已共用同一套准入与门控；`cairn explain` 输出逐条拒绝理由，不改变 Hook 行为；
-- 已加 **contract-admission eval** 与 **Trust & Applicability Eval v0**；过期、scope 不匹配、冲突注入已测量但尚未门控；
+- 已加 **contract-admission eval** 与 **Trust & Applicability Eval v0**；显式 scope 不匹配已门控并测量，过期、未声明 scope、冲突注入仍只测量不门控；
 - 在声称用户收益前，先做真实任务评测。
 
 之后：

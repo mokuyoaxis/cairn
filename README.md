@@ -20,11 +20,11 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 
 | Item | Value |
 |---|---|
-| Status | `v0.1.0` Internal Alpha |
-| Core | `cairn.py`, 1195 lines, zero third-party dependencies |
+| Status | `v0.1.0-alpha` Internal Alpha |
+| Core | `cairn.py`, 1198 lines, zero third-party dependencies |
 | Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
-| Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, three gates |
-| Tests | 95 unit tests |
+| Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, declared-scope filter, three gates |
+| Tests | 121 unit tests |
 | Evaluation | 80 positive + 60 negative queries on a 12-entry example library; contract admission fixture |
 | Latency | ~70 ms p95 for a cold hook process (single-machine sample) |
 | License | MIT © 2026 Messia |
@@ -101,7 +101,8 @@ Cairn returns cards, not documents. If nothing passes the gates, it stays silent
 1. **Tokenize.** Chinese is split into 2-grams; English and identifiers are split into words.
 2. **Score.** BM25 with field weights: `summary ×3 > name ×2 > body ×1`. Only query terms that exist in the library contribute to the denominator.
 3. **Admit.** Only entries with `status: active`, `trust: verified`, a non-empty `source`, and a valid `verified_at` may be injected. Imported entries start as `quarantined`.
-4. **Gate.** A candidate must pass three independent gates: normalized score, query-term coverage, and a margin over the second candidate.
+4. **Scope filter.** If the caller declares a context scope (`--scope` / `CAIRN_SCOPE`), entries whose `scope` does not intersect it are dropped as `out_of_scope`. Untagged entries stay universal; with no declared scope, behavior is unchanged.
+5. **Gate.** A candidate must pass three independent gates: normalized score, query-term coverage, and a margin over the second candidate.
 5. **Deduplicate.** The same card is injected at most once per session.
 6. **Render.** At most three cards, name + summary + path. Full text is fetched explicitly.
 
@@ -142,14 +143,14 @@ See [docs/security.md](docs/security.md) for the threat model and release checkl
 
 | Metric | Value |
 |---|---|
-| Unit tests | 109 passing |
+| Unit tests | 121 passing |
 | Seed library | 12 entries |
 | Evaluation set | 24 positive + 25 negative queries |
 | Recall@1 / @3 | 91.7% / 100% |
 | Injection@1 / @3 | 75% / 75% |
 | False injection rate | 4.0% |
 | Contract admission eval | 3/3 cases |
-| Trust & applicability eval | 10 cases; 4 known gaps |
+| Trust & applicability eval | 13 cases; declared-scope gating 3/3; 4 known gaps |
 | Avg injection (per query / per injection) | 145 / 194 chars |
 | Hook p95 | ~70 ms (single-machine sample) |
 
@@ -163,7 +164,7 @@ Known limitations:
 - 2-gram tokenization is coarse for very short queries;
 - there is no capture loop; `add` is manual;
 - `import` normalizes file names to kebab-case and runs `lint`, but only parses top-level scalar frontmatter (not nested YAML);
-- Experience Contract v0 is metadata, not cryptographic proof; `scope` is not yet used for admission, `verified_at` does not expire automatically, and conflict detection is not implemented;
+- Experience Contract v0 is metadata, not cryptographic proof; `scope` gates only when the caller declares it (it is never inferred from the query), `verified_at` does not expire automatically, and conflict detection is not implemented;
 - technical documentation is currently in Simplified Chinese.
 
 Injection length is reported both per query (a no-hit query counts as zero) and per actual injection. It is a diagnostic, not a cost guarantee; see [docs/evaluation.md](docs/evaluation.md).
@@ -176,7 +177,7 @@ Near-term work is about **contracts, trust, and measurement**, not feature count
 
 - Phase 0 correctness fixes, the first Git baseline, and **Experience Contract v0** are complete;
 - **Recall / Explain** now share one admission/gate pipeline; `cairn explain` reports per-candidate refusal reasons without changing hook behavior;
-- a **contract-admission eval** and **Trust & Applicability Eval v0** are in place; stale, out-of-scope, and conflicting injection is measured but not yet gated;
+- a **contract-admission eval** and **Trust & Applicability Eval v0** are in place; declared-scope mismatch is gated and measured, while stale, undeclared-scope, and conflicting injection are measured but not yet gated;
 - add real-task evaluation before claiming user benefit.
 
 Later:

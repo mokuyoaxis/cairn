@@ -161,6 +161,7 @@ class Index:
                 "summary": e["summary"], "kind": e["kind"],
                 "status": e["status"], "trust": e["trust"],
                 "verified_at": e["verified_at"], "source": e["source"],
+                "scope": e["scope"],
                 "n": n, "d": desc, "b": body,
                 "len": len(n) + len(desc) + len(body),
             })
@@ -218,6 +219,7 @@ def _to_plain(idx: "Index") -> dict:
         "docs": [{"name": d["name"], "path": d["path"], "summary": d["summary"],
                   "kind": d["kind"], "status": d["status"], "trust": d["trust"],
                   "verified_at": d["verified_at"], "source": d["source"],
+                  "scope": d["scope"],
                   "n": dict(d["n"]), "d": dict(d["d"]),
                   "b": dict(d["b"]), "len": d["len"]} for d in idx.docs],
         "idf": dict(idx.idf), "avgdl": idx.avgdl, "n_docs": idx.n_docs,
@@ -259,7 +261,8 @@ def get_index(force: bool = False) -> Index:
         try:
             with open(cache, "rb") as fh:
                 blob = pickle.load(fh)
-            if blob.get("sig") == sig and all("trust" in d for d in blob["data"]["docs"]):
+            if blob.get("sig") == sig and all("scope" in d and "trust" in d
+                                   for d in blob["data"]["docs"]):
                 _INDEX = _from_plain(blob["data"])
                 return _INDEX
         except Exception:
@@ -386,10 +389,20 @@ def is_injectable(doc) -> bool:
     """Contract v0 准入。"""
     return not contract_reason(doc)
 
+def scope_tags(text) -> set:
+    """'docker, security' → {'docker','security'}；空值 → 空集。"""
+    return {t.strip().lower() for t in (text or "").split(",") if t.strip()}
+
+def scope_match(doc, scope) -> bool:
+    """条目无 scope = 通用经验；与声明 scope 无交集 = 不适用。"""
+    tags = scope_tags(doc.get("scope"))
+    return not tags or bool(tags & scope_tags(scope))
+
 def gate(results, min_score: float = DEFAULT_MIN_SCORE,
          min_cover: float = DEFAULT_MIN_COVER,
          min_margin: float = DEFAULT_MIN_MARGIN,
-         max_cards: int = MAX_CARDS, q_len: int = 0, report=None):
+         max_cards: int = MAX_CARDS, q_len: int = 0, report=None,
+         scope: str = ""):
     """契约准入 + 三道门：分数、覆盖率、领先幅度（第一名/第二名）。
 
     report 非 None 时追加 (候选, 原因)，explain 与 hook 共用同一套判断。
@@ -400,6 +413,10 @@ def gate(results, min_score: float = DEFAULT_MIN_SCORE,
     q_len = max(q_len or 1, 1)
     ok = [r for r in results if is_injectable(r[4])]
     note([r for r in results if not is_injectable(r[4])], "ineligible")
+    if scope:
+        keep = [r for r in ok if scope_match(r[4], scope)]
+        note([r for r in ok if not scope_match(r[4], scope)], "out_of_scope")
+        ok = keep
     if not ok:
         return []
     top, second = ok[0][0], (ok[1][0] if len(ok) > 1 else 0.0)
@@ -462,7 +479,8 @@ def cmd_recall(args) -> int:
             print("[无结果]")
         return 0
     hits = gate(results, args.min_score, args.min_cover, args.min_margin,
-                max_cards=args.limit, q_len=len(tokenize(args.query)))
+                max_cards=args.limit, q_len=len(tokenize(args.query)),
+                scope=args.scope)
     if not hits:
         print("[无相关条目]" + ("（有候选但未通过契约/门控；用 --raw 查看）" if results else ""))
         return 1
@@ -475,12 +493,14 @@ def cmd_explain(args) -> int:
     qn = len(tokenize(args.query))
     report = []
     hits = gate(idx.search(args.query, limit=20), args.min_score, args.min_cover,
-                args.min_margin, max_cards=args.limit, q_len=qn, report=report)
+                args.min_margin, max_cards=args.limit, q_len=qn, report=report,
+                scope=args.scope)
     print(f"query: {args.query}｜候选 {len(report)} 条｜会注入 {len(hits)} 条")
     print(f"门: score≥{args.min_score:.2f} cover≥{args.min_cover:.0%} "
-          f"margin≥{args.min_margin:.2f}x")
+          f"margin≥{args.min_margin:.2f}x｜scope={args.scope or '未声明'}")
     for (norm, _, matched, _, doc), why in sorted(report, key=lambda x: -x[0][0]):
-        extra = "  " + contract_reason(doc) if why == "ineligible" else ""
+        extra = ("  " + contract_reason(doc) if why == "ineligible"
+                 else f"  scope={doc.get('scope') or '-'}" if why == "out_of_scope" else "")
         tag = "INJECT" if why == "hit" else why
         print(f"  [{tag}] {doc['name']}  norm={norm:.2f} cover={matched}/{qn}"
               f"{extra}  —  {doc['summary'][:40]}")
@@ -532,12 +552,9 @@ def cmd_add(args) -> int:
     fm = {"name": name, "summary": args.summary.strip(),
           "kind": args.kind, "updated": args.updated or today,
           "status": args.status, "trust": args.trust}
-    if args.scope:
-        fm["scope"] = args.scope.strip()
-    if args.source:
-        fm["source"] = args.source.strip()
-    if args.verified_at:
-        fm["verified_at"] = args.verified_at
+    for key in ("scope", "source", "verified_at"):
+        if getattr(args, key):
+            fm[key] = str(getattr(args, key)).strip()
     text = "---\n" + "\n".join(f"{k}: {v}" for k, v in fm.items()) + "\n---\n\n" + body + "\n"
     path.write_text(text, encoding="utf-8")
     global _INDEX
@@ -588,33 +605,28 @@ def check_entry(e, filename: str):
         problems.append(f"name 不是 kebab-case：{name}")
     if filename != f"{name}.md":
         problems.append(f"name({name}) 与文件名({filename}) 不一致")
-    if e["kind"] and e["kind"] not in KINDS:
-        problems.append(f"kind='{e['kind']}' 不在 {list(KINDS)}")
-    if e["updated"] and not DATE_RE.match(e["updated"]):
-        problems.append(f"updated='{e['updated']}' 不是 YYYY-MM-DD")
-    if e["status"] not in STATUSES:
-        problems.append(f"status='{e['status']}' 不在 {list(STATUSES)}")
-    if e["trust"] not in TRUSTS:
-        problems.append(f"trust='{e['trust']}' 不在 {list(TRUSTS)}")
-    if e["verified_at"] and not DATE_RE.match(e["verified_at"]):
-        problems.append(f"verified_at='{e['verified_at']}' 不是 YYYY-MM-DD")
+    for field, allowed in (("kind", KINDS), ("status", STATUSES), ("trust", TRUSTS)):
+        if e[field] and e[field] not in allowed:
+            problems.append(f"{field}='{e[field]}' 不在 {list(allowed)}")
+    for field in ("updated", "verified_at"):
+        if e[field] and not DATE_RE.match(e[field]):
+            problems.append(f"{field}='{e[field]}' 不是 YYYY-MM-DD")
     if e["trust"] == "verified" and not (e["source"] and DATE_RE.match(e["verified_at"])):
         problems.append("trust=verified 需要 source 与有效 verified_at")
     if not is_injectable(e):
         warnings.append("不会自动注入（需 active+verified+source+verified_at）")
-    if DATE_RE.match(e["verified_at"] or ""):
-        try:
-            age = (date.today() - date.fromisoformat(e["verified_at"])).days
-        except ValueError:
-            age = 0
-        if age > STALE_DAYS:
-            warnings.append(f"verified_at 已过期 {age} 天（>{STALE_DAYS} 天），建议重新验证")
+    try:
+        age = ((date.today() - date.fromisoformat(e["verified_at"])).days
+               if DATE_RE.match(e["verified_at"] or "") else 0)
+    except ValueError:
+        age = 0
+    if age > STALE_DAYS:
+        warnings.append(f"verified_at 已过期 {age} 天（>{STALE_DAYS} 天），建议重新验证")
     if len(e["summary"]) > 200:
         warnings.append(f"summary 过长（{len(e['summary'])} > 200 字符）")
     if len(e["body"].splitlines()) > 80:
         warnings.append(f"正文 {len(e['body'].splitlines())} 行（建议 ≤80）")
-    extra = [k for k in fm if k not in REQUIRED + OPTIONAL]
-    if extra:
+    if extra := [k for k in fm if k not in REQUIRED + OPTIONAL]:
         warnings.append(f"未知字段 {extra}（会被忽略）")
     return problems, warnings
 
@@ -639,12 +651,9 @@ def cmd_lint(args) -> int:
         seen_slugs[e["slug"]] += 1
         slugs.add(e["slug"])
         slugs.add(e["name"])
-    for name, n in seen_names.items():
-        if n > 1:
-            problems.append(f"重名：{name} 出现 {n} 次")
-    for slug, n in seen_slugs.items():
-        if n > 1:
-            problems.append(f"重文件：{slug}.md 出现 {n} 次")
+    for label, counter, tail in (("重名", seen_names, ""), ("重文件", seen_slugs, ".md")):
+        problems.extend(f"{label}：{name}{tail} 出现 {n} 次"
+                        for name, n in counter.items() if n > 1)
     scope_map = {}
     for e in entries:
         for tag in [t.strip() for t in (e["scope"] or "").split(",") if t.strip()]:
@@ -774,7 +783,8 @@ def cmd_hook(args) -> int:
     idx = get_index()
     results = idx.search(prompt, limit=20)
     hits = [h for h in gate(results, args.min_score, args.min_cover, args.min_margin,
-                            q_len=len(tokenize(prompt))) if h[4]["name"] not in seen]
+                            q_len=len(tokenize(prompt)), scope=args.scope)
+            if h[4]["name"] not in seen]
     reason = ("ineligible" if results and not any(is_injectable(r[4]) for r in results)
               else "below_gate")
     if not hits:
@@ -1054,11 +1064,9 @@ def cmd_eval(args) -> int:
         if not any(x in expect for x in injected):
             misses.append((row["query"], expect[0], order[:2], injected[:2]))
 
-    neg_rows = []
     neg_file = Path(args.negatives)
-    if neg_file.is_file():
-        neg_rows = [json.loads(l) for l in neg_file.read_text(encoding="utf-8").splitlines()
-                    if l.strip() and not l.startswith("#")]
+    neg_rows = ([json.loads(l) for l in neg_file.read_text(encoding="utf-8").splitlines()
+                 if l.strip() and not l.startswith("#")] if neg_file.is_file() else [])
     noise = sum(1 for r in neg_rows
                 if gate(idx.search(r["query"]), args.min_score, args.min_cover,
                         args.min_margin, q_len=len(tokenize(r["query"]))))
@@ -1090,30 +1098,33 @@ def add_gate_args(s) -> None:
                           ("min-cover", DEFAULT_MIN_COVER),
                           ("min-margin", DEFAULT_MIN_MARGIN)):
         s.add_argument(f"--{name}", type=float, default=default)
+    s.add_argument("--scope", default=os.environ.get("CAIRN_SCOPE", ""),
+                   help="声明当前上下文 scope（逗号分隔）；条目 scope 无交集则不注入")
+
+def _sub(sub, name, func, text, **kw) -> argparse.ArgumentParser:
+    s = sub.add_parser(name, help=text)
+    s.set_defaults(func=func, **kw)
+    return s
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="cairn", description="极简经验库")
     p.add_argument("--version", action="version", version=f"cairn {VERSION}")
     sub = p.add_subparsers(dest="cmd", required=True)
-
-    s = sub.add_parser("recall", help="手动检索")
+    s = _sub(sub, "recall", cmd_recall, "手动检索")
     s.add_argument("query")
     s.add_argument("--limit", type=int, default=3)
     s.add_argument("--raw", action="store_true", help="打印原始分数")
     add_gate_args(s)
-    s.set_defaults(func=cmd_recall)
 
-    s = sub.add_parser("explain", help="解释检索的契约准入与门控")
+    s = _sub(sub, "explain", cmd_explain, "解释检索的契约准入与门控")
     s.add_argument("query")
     s.add_argument("--limit", type=int, default=3)
     add_gate_args(s)
-    s.set_defaults(func=cmd_explain)
 
-    s = sub.add_parser("show", help="打印条目全文（记一次命中）")
+    s = _sub(sub, "show", cmd_show, "打印条目全文（记一次命中）")
     s.add_argument("name")
-    s.set_defaults(func=cmd_show)
 
-    s = sub.add_parser("add", help="写入一条经验")
+    s = _sub(sub, "add", cmd_add, "写入一条经验")
     s.add_argument("body", nargs="?", help="正文；用 - 或管道传 stdin")
     s.add_argument("--name")
     s.add_argument("--summary")
@@ -1125,62 +1136,50 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--verified-at")
     s.add_argument("--updated")
     s.add_argument("--force", action="store_true")
-    s.set_defaults(func=cmd_add)
 
-    s = sub.add_parser("ls", help="列出条目")
+    s = _sub(sub, "ls", cmd_ls, "列出条目")
     s.add_argument("--md", action="store_true", help="输出自动生成的索引")
-    s.set_defaults(func=cmd_ls)
 
-    s = sub.add_parser("lint", help="校验全库")
-    s.set_defaults(func=cmd_lint)
+    s = _sub(sub, "lint", cmd_lint, "校验全库")
 
-    s = sub.add_parser("import", help="导入任意 markdown 条目目录")
+    s = _sub(sub, "import", cmd_import, "导入任意 markdown 条目目录")
     s.add_argument("src", help="源目录（递归找 *.md）")
     s.add_argument("--exclude", help="排除正则（匹配文件名或 summary）")
     s.add_argument("--force", action="store_true")
     s.add_argument("--dry-run", action="store_true", help="只打印计划，不写库")
-    s.set_defaults(func=cmd_import)
 
-    s = sub.add_parser("prune-links", help="删除指向不存在条目的 [[双链]]")
-    s.set_defaults(func=cmd_prune_links)
+    s = _sub(sub, "prune-links", cmd_prune_links, "删除指向不存在条目的 [[双链]]")
 
-    s = sub.add_parser("hook", help="平台 hook 入口（stdin JSON → stdout JSON）")
+    s = _sub(sub, "hook", cmd_hook, "平台 hook 入口（stdin JSON → stdout JSON）")
     s.add_argument("--format", default="claude",
                    choices=("claude", "codex", "text", "json"))
     add_gate_args(s)
-    s.set_defaults(func=cmd_hook)
 
-    s = sub.add_parser("eval", help="离线回归闸门")
+    s = _sub(sub, "eval", cmd_eval, "离线回归闸门")
     s.add_argument("--queries", default=str(Path(__file__).resolve().parent / "eval" / "queries.jsonl"))
     s.add_argument("--negatives", default=str(Path(__file__).resolve().parent / "eval" / "negatives.jsonl"))
     s.add_argument("--min-inject", type=float, default=0.70)
     s.add_argument("--max-noise", type=float, default=0.10)
     add_gate_args(s)
-    s.set_defaults(func=cmd_eval)
 
-    s = sub.add_parser("feedback", help="记录某条经验有用/误导")
+    s = _sub(sub, "feedback", cmd_feedback, "记录某条经验有用/误导", signal="neutral")
     s.add_argument("name")
     s.add_argument("--helpful", dest="signal", action="store_const", const="helpful")
     s.add_argument("--harmful", dest="signal", action="store_const", const="harmful")
     s.add_argument("--note")
-    s.set_defaults(func=cmd_feedback, signal="neutral")
 
-    s = sub.add_parser("audit", help="脱敏体检（entries + 日志/会话/缓存）")
-    s.set_defaults(func=cmd_audit)
+    s = _sub(sub, "audit", cmd_audit, "脱敏体检（entries + 日志/会话/缓存）")
 
-    s = sub.add_parser("sanitize", help="复制一份并替换标识/凭据（默认不覆盖）")
+    s = _sub(sub, "sanitize", cmd_sanitize, "复制一份并替换标识/凭据（默认不覆盖）")
     s.add_argument("--out", required=True, help="输出目录（不得等于或位于 entries/ 内）")
     s.add_argument("--force", action="store_true", help="允许覆盖输出目录中已有文件")
-    s.set_defaults(func=cmd_sanitize)
 
-    s = sub.add_parser("nudge", help="会话收尾提醒（Stop 钩子用）")
+    s = _sub(sub, "nudge", cmd_nudge, "会话收尾提醒（Stop 钩子用）")
     s.add_argument("--format", default="text", choices=("claude", "codex", "text", "json"))
-    s.set_defaults(func=cmd_nudge)
 
-    s = sub.add_parser("stats", help="注入 / miss 统计")
+    s = _sub(sub, "stats", cmd_stats, "注入 / miss 统计")
     s.add_argument("--show-queries", action="store_true",
                    help="显示脱敏后的 miss 预览（默认只显示查询指纹）")
-    s.set_defaults(func=cmd_stats)
     return p
 
 def main(argv=None) -> int:

@@ -7,7 +7,9 @@ Sidecar eval over a mixed-trust fixture. It runs the real `Index.search()` and
 
 - hard: positive controls inject; contract-ineligible/unrelated queries stay
   silent; a malicious body is not rendered into cards;
-- known gap: stale `verified_at`, out-of-scope entries, conflicting pairs, and
+- hard (scope): when a case declares `scope`, out-of-scope entries must not
+  inject and in-scope ones still must;
+- known gap: stale `verified_at`, out-of-scope entries without a declared scope, conflicting pairs, and
   an instruction in `summary` are still injectable because the core does not
   gate on them. They are reported, not disguised as PASS.
 
@@ -63,12 +65,13 @@ def main() -> int:
         m = dict(pos=0, pos_ok=0, neg=0, neg_silent=0, wrong=0,
                  stale=0, stale_inj=0, scope=0, scope_inj=0,
                  conflict=0, conflict_both=0, mal_body=0, mal_body_leak=0,
-                 mal_sum=0, mal_sum_inj=0)
+                 mal_sum=0, mal_sum_inj=0, scoped=0, scoped_ok=0)
 
         for case in cases:
             query = case["query"]
             hits = cairn.gate(idx.search(query, limit=len(idx.docs)),
-                              q_len=len(cairn.tokenize(query)))
+                              q_len=len(cairn.tokenize(query)),
+                              scope=case.get("scope", ""))
             got = [h[4]["name"] for h in hits]
             cards = cairn.render_cards(hits) if hits else ""
             kind, label = case["kind"], case["id"]
@@ -106,6 +109,16 @@ def main() -> int:
                 print(f"[{'KNOWN' if both else 'PASS'}] {label:<18} co-injected={both}")
                 if both:
                     known.append((label, "conflict co-injection (no detection)"))
+            elif kind == "scope-declared":
+                m["scoped"] += 1
+                want = [h[4]["name"] for h in hits]
+                ok = (all(s in want for s in case["slugs"]) if case["expect"] == "inject"
+                      else not want)
+                m["scoped_ok"] += ok
+                if not ok:
+                    hard.append((label, f"scope={case['scope']} got {want}"))
+                print(f"[{'PASS' if ok else 'FAIL'}] {label:<18} "
+                      f"scope={case['scope']} injected={want}")
             else:  # stale / scope / malicious-summary
                 bucket = {"stale": "stale", "scope": "scope",
                           "malicious-summary": "mal_sum"}[kind]
@@ -122,7 +135,8 @@ def main() -> int:
         print(f"  错误交付（负例被注入）  {_pct(m['wrong'], m['neg'])}")
         print(f"  恶意正文泄露            {_pct(m['mal_body_leak'], m['mal_body'])}")
         print(f"  过期注入                {_pct(m['stale_inj'], m['stale'])}  ← 已知缺口")
-        print(f"  scope 不匹配注入        {_pct(m['scope_inj'], m['scope'])}  ← 已知缺口")
+        print(f"  显式 scope 门控         {_pct(m['scoped_ok'], m['scoped'])}")
+        print(f"  scope 未声明时注入      {_pct(m['scope_inj'], m['scope'])}  ← 已知缺口")
         print(f"  冲突同时注入            {_pct(m['conflict_both'], m['conflict'])}  ← 已知缺口")
         print(f"  恶意 summary 注入       {_pct(m['mal_sum_inj'], m['mal_sum'])}  ← 已知缺口")
 

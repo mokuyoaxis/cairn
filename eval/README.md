@@ -40,7 +40,7 @@ entry is silently dropped. The fixture is deliberately lint-warning-only:
 ineligible entries are valid library content, they just must not be injected.
 
 This is the first slice of the planned **Trust & Applicability Eval**. It does
-not yet cover malicious instructions, stale `verified_at`, scope mismatch,
+not yet cover malicious instructions, stale `verified_at`, undeclared-scope mismatch,
 conflicting entries, or real agent task outcomes.
 
 ## 3. Trust & Applicability Eval v0
@@ -48,7 +48,7 @@ conflicting entries, or real agent task outcomes.
 - `trust/entries/` — 10 synthetic-token entries: fresh positive controls,
   unverified/quarantined negatives, stale `verified_at`, out-of-scope,
   a conflicting pair, a malicious body, and an instruction in `summary`.
-- `trust_cases.jsonl` — case kind + expected behavior.
+- `trust_cases.jsonl` — case kind + expected behavior (13 cases).
 - `trust_eval.py` — runs the real `Index.search()` + `cairn.gate()` in a
   temporary `CAIRN_HOME`:
 
@@ -58,7 +58,9 @@ python3 eval/trust_eval.py --strict  # known gaps also fail
 ```
 
 Hard constraints: positive controls must inject; contract-ineligible and
-unrelated queries must stay silent; a malicious body must not appear in cards.
+unrelated queries must stay silent; a malicious body must not appear in cards;
+when a case declares `scope`, out-of-scope entries must abstain and in-scope
+ones must still inject.
 Stale, out-of-scope, conflicting, and malicious-summary injections are reported
 as `[KNOWN]` gaps (they are not gated by the core yet), so the eval cannot be
 gamed by rejecting everything: positive controls must still inject.

@@ -11,8 +11,9 @@ Cairn 的评测目标是**回归与适用性判断**，不是排行榜。当前�
 - 4.0% 负例仍被注入；安全评测需要单独覆盖恶意/过期/scope 不匹配内容。
 - Experience Contract v0 已实现：注入指标只统计 `active + verified + source + verified_at` 的条目；
   示例库的 `trust: verified` 是 fixture 元数据，不是生产验证。
-- 已加 **Contract admission eval** 与 **Trust & Applicability Eval v0**（10 cases）；
-  过期/scope/冲突/恶意 summary 仍是已知缺口，评测先如实报告，而不是只扩大 Recall。
+- 已加 **Contract admission eval** 与 **Trust & Applicability Eval v0**（13 cases）；
+  显式声明 scope 时的拦截已是硬约束（3/3）；过期/未声明 scope/冲突/恶意 summary
+  仍是已知缺口，评测先如实报告，而不是只扩大 Recall。
 
 ## 1. 当前评测集
 
@@ -76,7 +77,7 @@ Cairn 的评测目标是**回归与适用性判断**，不是排行榜。当前�
 | 负例误触发 | 4.0%（1/25） |
 | 平均注入（每 query，未注入计 0） | 145 字符 ≈ 73 tokens |
 | 平均注入（每次实际注入） | 188 字符 ≈ 94 tokens（58/80 次） |
-| 单元测试 | 109 项，全绿 |
+| 单元测试 | 121 项，全绿 |
 | hook p95（本机） | 约 70ms |
 
 解释：
@@ -173,7 +174,8 @@ python3 eval/trust_eval.py --strict   # 已知缺口也计为失败
 | 维度 | 当前结果 | 原因 |
 |---|---|---|
 | 过期 `verified_at` | 1/1 注入 | 没有自动过期 |
-| scope 不匹配 | 1/1 注入 | `scope` 未参与门控 |
+| 显式 scope 门控 | 3/3 拦截正确 | 硬约束（`--scope` / `CAIRN_SCOPE`） |
+| scope 未声明时注入 | 1/1 注入 | 需调用方声明 scope 才生效 |
 | 冲突条目 | 1/1 同时注入 | 无冲突检测；margin 只能挡住部分近似条目 |
 | 恶意 summary | 1/1 注入 | summary 本来就是卡片内容；`verified` 是自我声明 |
 
