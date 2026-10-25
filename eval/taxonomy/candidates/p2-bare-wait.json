@@ -1,0 +1,47 @@
+{
+  "slug": "p2-bare-wait",
+  "case": "脚本无输出且不退出（疑似 wait 阻塞）",
+  "candidates": [
+    {
+      "cause": "裸 wait 在等待本 shell 的全部后台作业",
+      "check": "jobs -l 看是否有 Running 作业；再对具体 PID wait 观察是否返回",
+      "if_positive": "对具体 PID wait 立刻返回 exit=0 → 支持该候选",
+      "if_negative": "仍阻塞 → 该候选不足以解释当前现象",
+      "limits": "只在同一 shell 内成立；子 shell 的 wait 不会等待父 shell 的作业",
+      "side_effects": "无",
+      "verified": true,
+      "verified_by": "2026-10-25 E1(124 超时)/E5(wait -n 返回)/E7(jobs -l)"
+    },
+    {
+      "cause": "被等待对象不是本 shell 的子进程（等待无效而非阻塞）",
+      "check": "wait <pid>; echo $?",
+      "if_positive": "立即返回 127 且 stderr 含 not a child of this shell → 是等待对象无效",
+      "if_negative": "返回 0 → 确为本 shell 子进程",
+      "limits": "无法据此判断进程是否仍在运行，只说明它不受本 shell wait 管辖",
+      "side_effects": "无",
+      "verified": true,
+      "verified_by": "2026-10-25 E3"
+    },
+    {
+      "cause": "常驻进程已脱离作业表（setsid/disown），裸 wait 不会等它",
+      "check": "裸 wait 是否立刻返回",
+      "if_positive": "立刻返回 exit=0 → 该进程不会造成 wait 阻塞",
+      "if_negative": "持续阻塞 → 它仍在作业表中",
+      "limits": "仅代表当前 shell 视角；不能推断进程健康状态",
+      "side_effects": "无",
+      "verified": true,
+      "verified_by": "2026-10-25 E6"
+    }
+  ],
+  "ruled_out": [
+    {
+      "cause": "wait 非本 shell 子进程会挂起",
+      "result": "refuted",
+      "case": "cairn-trial-2026-10-25",
+      "date": "2026-10-25",
+      "conditions": "bash 5.2.21，`wait 999999` 实测立即返回 127",
+      "evidence": "E3：wait: pid ... is not a child of this shell; exit=127",
+      "note": "仅针对该版本与该场景；不得泛化为“wait 不会因等待无效对象而失败”"
+    }
+  ]
+}

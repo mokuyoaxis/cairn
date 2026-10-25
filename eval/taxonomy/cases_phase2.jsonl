@@ -1,0 +1,18 @@
+{"id":"e1","set":"applicability","query":"sqlite 拷贝后表不见了","context":"journal_mode=wal,checkpointed=true","expect_recall":["p1-sqlite-wal-copy"],"forbid_deliver":["p1-sqlite-wal-copy"],"note":"已 checkpoint，p1 的前提不成立"}
+{"id":"e2","set":"applicability","query":"wait -n 在脚本里不工作 报 Illegal option","context":"shell=dash","expect_recall":["p6-wait-n-bash-only"],"forbid_deliver":["p6-wait-n-bash-only"],"note":"dash 无 wait -n，条目只适用 bash"}
+{"id":"e3","set":"applicability","query":"脚本报 $'\r' 相关的错","context":"os=linux","expect_recall":["p7-crlf-breaks-scripts"],"forbid_deliver":["p7-crlf-breaks-scripts"],"note":"Linux 下不适用（排除条件命中）"}
+{"id":"e4","set":"applicability","query":"wait -n 用不了 提示 Illegal option","context":"shell=bash","expect_recall":["p6-wait-n-bash-only"],"expect_deliver":["p6-wait-n-bash-only"],"note":"bash 下条件满足，应正常交付"}
+{"id":"e5","set":"applicability","query":"只拷 .db 会丢数据吗","context":"journal_mode=delete","expect_recall":["p1-sqlite-wal-copy"],"forbid_deliver":["p1-sqlite-wal-copy"],"note":"delete 模式下单文件拷贝通常完整"}
+{"id":"e6","set":"applicability","query":"跨机器拷贝 sqlite 文件","context":"journal_mode=wal,checkpointed=false","expect_recall":["p1-sqlite-wal-copy"],"expect_deliver":["p1-sqlite-wal-copy"],"note":"条件全满足，应正常交付"}
+{"id":"e7","set":"applicability","query":"sqlite 拷贝之后表不见了","context":"","expect_recall":["p1-sqlite-wal-copy"],"forbid_deliver":["p1-sqlite-wal-copy"],"note":"未声明任何事实 → unknown"}
+{"id":"e8","set":"applicability","query":"wait -n 报 Illegal option","context":"","expect_recall":["p6-wait-n-bash-only"],"forbid_deliver":["p6-wait-n-bash-only"],"note":"未声明 shell → unknown"}
+{"id":"e9","set":"applicability","query":"脚本里有 \\r 导致报错","context":"","expect_recall":["p7-crlf-breaks-scripts"],"forbid_deliver":["p7-crlf-breaks-scripts"],"note":"未声明 os → unknown"}
+{"id":"e10","set":"applicability","query":"只拷 .db 但已经 checkpoint 过 还会丢吗","context":"checkpointed=true,journal_mode=wal","expect_recall":["p1-sqlite-wal-copy"],"forbid_deliver":["p1-sqlite-wal-copy"],"note":"反证已声明，历史经验不适用"}
+{"id":"e11","set":"applicability","query":"CI 偶发失败 重跑就通过","context":"","conflict_pair":["s1-retry-now","s2-retry-never"],"expect_conflict_silent":true,"note":"结论相反；分差若超过 min_margin，margin 门不会消音"}
+{"id":"e12","set":"applicability","query":"删掉 -wal 文件就能修好 sqlite 吗","context":"","forbid_deliver":["s3-refuted-delete-wal"],"note":"唯一强匹配是被反驳条目"}
+{"id":"e13","set":"applicability","query":"只拷 db 文件 报错了","context":"checkpointed=true","expect_recall":["p1-sqlite-wal-copy"],"forbid_deliver":["p1-sqlite-wal-copy"],"note":"高分但不适用"}
+{"id":"e14","set":"blind2","query":"换台机器之后表就查不到了","context":"journal_mode=wal,checkpointed=false","expect_recall":["p1-sqlite-wal-copy"],"expect_deliver":["p1-sqlite-wal-copy"],"note":"盲写措辞"}
+{"id":"e15","set":"blind2","query":"脚本在 sh 里跑就提示没有这个选项","context":"shell=dash","expect_recall":["p6-wait-n-bash-only"],"forbid_deliver":["p6-wait-n-bash-only"],"note":"盲写 + 不适用"}
+{"id":"e16","set":"blind2","query":"从 Windows 拷过来的脚本一执行就报错","context":"os=windows","expect_recall":["p7-crlf-breaks-scripts"],"expect_deliver":["p7-crlf-breaks-scripts"],"note":"盲写 + 适用"}
+{"id":"e17","set":"blind2","query":"帮我写个按月统计的 SQL","context":"","expect_silent":true}
+{"id":"e18","set":"blind2","query":"docker 镜像里怎么跑 sqlite 命令行","context":"","expect_silent":true}

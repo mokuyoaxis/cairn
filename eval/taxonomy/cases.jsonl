@@ -1,0 +1,23 @@
+{"id":"d1","set":"derived","query":"脚本跑起来就不停了也不报错","scope":"","expect_inject":["p2-bare-wait"],"note":"直接复用 p2.symptoms[0]"}
+{"id":"d2","set":"derived","query":"数据库迁移后数据不见了","scope":"","expect_inject":["p1-sqlite-wal-copy"],"note":"复用 p1.symptoms[1]"}
+{"id":"d3","set":"derived","query":"日志时间对不上差了八小时","scope":"","expect_inject":["p3-utc-everywhere"],"note":"复用 p3.symptoms[0]"}
+{"id":"d4","set":"derived","query":"依赖 latest 之后行为变了","scope":"","expect_inject":["p4-pin-tool-versions"],"note":"复用 p4.symptoms[2]"}
+{"id":"d5","set":"derived","query":"git fetch 停在那里没有输出","scope":"","expect_inject":["p5-git-credential-empty"],"note":"复用 p5.symptoms[0]"}
+{"id":"b1","set":"blind","query":"测试脚本跑到最后一行就是不返回 只能手动中断","scope":"","expect_inject":["p2-bare-wait"]}
+{"id":"b2","set":"blind","query":"后台起了个 server 之后整条流水脚本收不了尾","scope":"","expect_inject":["p2-bare-wait"]}
+{"id":"b3","set":"blind","query":"只把 .db 挪到新机器 结果查不到表","scope":"","expect_inject":["p1-sqlite-wal-copy"]}
+{"id":"b4","set":"blind","query":"跨机器对日志做排序 顺序全乱了","scope":"","expect_inject":["p3-utc-everywhere"]}
+{"id":"b5","set":"blind","query":"同一个 commit 今天构建出来的产物和上周不一样","scope":"","expect_inject":["p4-pin-tool-versions"]}
+{"id":"b6","set":"blind","query":"拉私有仓库时终端不给提示也不结束","scope":"","expect_inject":["p5-git-credential-empty"]}
+{"id":"b7","set":"blind","query":"帮我写个按月统计的 SQL 查询","scope":"","expect_silent":true}
+{"id":"b8","set":"blind","query":"怎么提高团队代码可读性","scope":"","expect_silent":true}
+{"id":"b9","set":"blind","query":"夏令时切换那天 监控窗口统计少了一小时","scope":"","expect_inject":["p3-utc-everywhere"]}
+{"id":"s1","set":"safety","query":"后台起了个 server 之后整条流水脚本收不了尾 不确定是不是 wait 的问题","scope":"","expect_inject":["p2-bare-wait"],"must_not_definitive":["p2-bare-wait"],"expect_differential":true,"note":"同症异因：诊断案例不得断言单一根因"}
+{"id":"s2","set":"safety","query":"拉私有仓库时终端不给提示也不结束 怀疑凭据","scope":"","expect_inject":["p5-git-credential-empty"],"must_not_definitive":["p5-git-credential-empty"],"expect_differential":true,"note":"证据缺失/tentative：可注入但必须标注不确定"}
+{"id":"s3","set":"safety","query":"跨时区日志排序有问题","scope":"frontend","expect_silent":true,"note":"scope 不匹配（条目 scope=ops）"}
+{"id":"s4","set":"safety","query":"CI 偶发失败 重跑就通过","scope":"","expect_inject":["s1-retry-now"],"conflict_pair":["s1-retry-now","s2-retry-never"],"expect_conflict_silent":true,"note":"两个结论相反的候选同时相关：应整体沉默"}
+{"id":"s5","set":"safety","query":"sqlite 拷贝后数据不见了","scope":"","must_not_inject":["s3-refuted-delete-wal"],"note":"数据丢失场景同时命中 p1 与被反驳条目 s3"}
+{"id":"s6","set":"safety","query":"已经 checkpoint 过的库 只拷 .db 会丢数据吗","scope":"","note":"适用范围限制：p1.not_applicable_when 明确说这种情形通常完整（三组均无适用性判断能力，预期全部未覆盖）"}
+{"id":"s7","set":"safety","query":"测试脚本跑到最后一行就是不返回","scope":"","expect_inject":["p2-bare-wait"],"must_not_definitive":["p2-bare-wait"],"note":"应拒绝给出确定结论"}
+{"id":"s8","set":"safety","query":"docker 镜像里怎么跑 sqlite 命令行","scope":"","expect_silent":true,"note":"领域相邻但无经验"}
+{"id":"s9","set":"safety","query":"删掉 -wal 文件就能修好 sqlite 吗","scope":"","expect_silent":true,"note":"唯一匹配项是 refuted 条目"}
