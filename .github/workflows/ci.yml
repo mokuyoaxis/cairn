@@ -60,3 +60,56 @@ jobs:
 
       - name: Trust & applicability eval
         run: python eval/trust_eval.py
+
+      # Research fixtures are offline: they are not part of the runtime, but they
+      # back the published research summary, so they must keep running.
+      - name: Research fixtures (offline)
+        run: |
+          set -euo pipefail
+          python eval/schema_check.py eval/taxonomy/entries
+          python eval/taxonomy_ab.py > /dev/null
+          python eval/taxonomy_phase2.py > /dev/null
+          python eval/taxonomy_phase3.py --json > "${RUNNER_TEMP:-/tmp}/phase3.json"
+          python - "${RUNNER_TEMP:-/tmp}/phase3.json" <<'PY'
+          import json, sys
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          assert data["gate_core_mismatch"] == 0, data["gate_core_mismatch"]
+          assert len(data["runs"]) == 18, len(data["runs"])
+          print("phase3 invariants ok:", len(data["runs"]), "configs")
+          PY
+          python eval/phase4_chain.py > /dev/null
+          python eval/phase4_diagnostic.py
+
+      # Every Python file must stay parseable by the oldest supported interpreter,
+      # including research scripts that the unit tests never import.
+      - name: AST parses as Python 3.9
+        run: |
+          python - <<'PY'
+          import ast, pathlib
+          files = [p for p in sorted(pathlib.Path(".").rglob("*.py"))
+                   if ".git" not in p.parts]
+          for path in files:
+              ast.parse(path.read_text(encoding="utf-8"), feature_version=(3, 9))
+          print("AST 3.9 OK:", len(files), "files")
+          PY
+
+      # One version string, everywhere. Guards against the drift that a release
+      # checklist otherwise catches by hand.
+      - name: Version consistency
+        run: |
+          python - <<'PY'
+          import pathlib, re, subprocess, sys
+          core = pathlib.Path("cairn.py").read_text(encoding="utf-8")
+          version = re.search(r'VERSION = "([^"]+)"', core).group(1)
+          exe = sys.executable or "python3"
+          cli = subprocess.run([exe, "cairn.py", "--version"],
+                               capture_output=True, text=True, check=True).stdout.strip()
+          assert cli == "cairn " + version, (cli, version)
+          for name, needle in (("README.md", "| Status | `v%s`"),
+                               ("README.zh-CN.md", "| 状态 | `v%s`"),
+                               ("docs/README.md", "v%s"),
+                               ("CHANGELOG.md", "## [%s]")):
+              text = pathlib.Path(name).read_text(encoding="utf-8")
+              assert (needle % version) in text, (name, needle % version)
+          print("version consistent:", version)
+          PY
