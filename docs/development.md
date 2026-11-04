@@ -73,7 +73,7 @@ CAIRN_HOME="$TMP" python3 cairn.py audit
 python3 eval/contract_eval.py
 ```
 
-当前基线（2026-11-04，0.1.1 候选）：
+当前基线（2026-11-04，0.1.1）：
 
 - 226 项测试全绿；
 - 12 条示例，lint 通过（全部为 `active + verified + source + verified_at` 的 fixture 条目）；

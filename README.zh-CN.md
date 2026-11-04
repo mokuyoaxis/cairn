@@ -21,7 +21,7 @@ Cairn 是一个本地优先、确定性的 **Experience Retrieval Layer（经验
 
 | 项目 | 内容 |
 |---|---|
-| 状态 | `v0.1.1` — 索引撤回维护版本（发布候选） |
+| 状态 | `v0.1.1` — 索引撤回维护版本 |
 | 核心 | `cairn.py`，1200 行，零第三方依赖 |
 | 存储 | 带 Experience Contract v0 元数据的本地 Markdown 条目；缓存可重建 |
 | 检索 | 中文 2-gram + 英文词元，BM25，契约准入 + 声明式 scope 过滤 + 三道门 |

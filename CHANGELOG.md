@@ -3,9 +3,9 @@
 Notable changes to Cairn. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 version numbers follow semver, with an explicit *experimental* label while the project is pre-1.0.
 
-## [0.1.1] — 2026-11-04 — Index revocation maintenance (release candidate)
+## [0.1.1] — 2026-11-04 — Index revocation maintenance
 
-> Release candidate: implementation and local verification are complete; tag pending.
+> Released 2026-11-04 from tag `v0.1.1`.
 
 ### Fixed
 

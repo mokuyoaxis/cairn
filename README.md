@@ -21,7 +21,7 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 
 | Item | Value |
 |---|---|
-| Status | `v0.1.1` — index revocation maintenance (release candidate) |
+| Status | `v0.1.1` — index revocation maintenance |
 | Core | `cairn.py`, 1200 lines, zero third-party dependencies |
 | Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
 | Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, declared-scope filter, three gates |
