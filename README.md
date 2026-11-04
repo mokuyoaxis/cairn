@@ -21,13 +21,13 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 
 | Item | Value |
 |---|---|
-| Status | `v0.1.0` — first experimental stable baseline (frozen) |
+| Status | `v0.1.1` — index revocation maintenance (release candidate) |
 | Core | `cairn.py`, 1200 lines, zero third-party dependencies |
 | Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
 | Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, declared-scope filter, three gates |
 | Tests | 226 (123 core + 103 research fixtures) |
 | Evaluation | 80 positive + 60 negative queries on a 12-entry seed library; contract-admission and trust fixtures |
-| Latency | ~70 ms p95 for a cold hook process (single-machine sample) |
+| Latency | ~77 ms p95 for a cold hook process (single-machine sample) |
 | License | MIT © 2026 Messia |
 
 ---

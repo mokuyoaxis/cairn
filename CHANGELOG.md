@@ -3,9 +3,9 @@
 Notable changes to Cairn. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 version numbers follow semver, with an explicit *experimental* label while the project is pre-1.0.
 
-## [Unreleased] — 0.1.1 maintenance
+## [0.1.1] — 2026-11-04 — Index revocation maintenance (release candidate)
 
-> Release pending: implementation and local verification are complete on release/0.1.1.
+> Release candidate: implementation and local verification are complete; tag pending.
 
 ### Fixed
 
@@ -13,6 +13,7 @@ version numbers follow semver, with an explicit *experimental* label while the p
   active → archived edit is detected even when size and mtime are unchanged.
 - The in-memory index is revalidated against the current signature before reuse;
   a stale disk cache is rejected and rebuilt.
+- Cache validation remains local and deterministic; no dependency or network path was added.
 
 ### Tests
 
@@ -89,4 +90,4 @@ This is **experimental software** — read *Known limitations* before relying on
 - Cairn is **not** a prompt-injection defence and does not replace the host's sandbox.
 
 [0.1.0]: https://github.com/mokuyoaxis/cairn/releases/tag/v0.1.0
-- Cache validation remains local and deterministic; no dependency or network path was added.
+[0.1.1]: https://github.com/mokuyoaxis/cairn/releases/tag/v0.1.1

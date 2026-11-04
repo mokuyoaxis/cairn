@@ -4,7 +4,7 @@
 > 它不是通用 Memory、自动 Skill 生成器或 Markdown 知识管理平台。
 
 **入口**：[English README](../README.md) · [简体中文 README](../README.zh-CN.md)  
-**状态**：v0.1.0（首个实验性稳定基线，已冻结）· 技术文档目前以简体中文为主。
+**状态**：v0.1.1（索引撤回维护版本，发布候选）· 技术文档目前以简体中文为主。
 
 ## 文档地图
 
@@ -16,7 +16,8 @@
 | [security.md](security.md) | 信任边界、日志隐私、audit/sanitize、注入风险、发布检查 | 维护者/安全审查 |
 | [development.md](development.md) | 目录、测试、基线复现、CI、编码约束、贡献流程 | 贡献者 |
 | [research/taxonomy-feasibility-2026.md](research/taxonomy-feasibility-2026.md) | 诊断式适用性门控四轮研究总结与 NO-GO 决策 | 想知道"为什么没做这个功能"的人 |
-| [release-notes/v0.1.0.md](release-notes/v0.1.0.md) | v0.1.0 发布说明（英文为主 + 中文摘要），由 Release workflow 发布 | 想了解本版本做了什么/没做什么的人 |
+| [release-notes/v0.1.0.md](release-notes/v0.1.0.md) | v0.1.0 发布说明（英文为主 + 中文摘要），由 Release workflow 发布 | 想了解首个冻结基线做了什么/没做什么的人 |
+| [release-notes/v0.1.1.md](release-notes/v0.1.1.md) | v0.1.1 维护发布说明（英文为主 + 中文摘要） | 想了解索引撤回修复的人 |
 
 ## 阅读顺序
 

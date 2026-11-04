@@ -17,7 +17,7 @@ from collections import Counter
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 
 # ── 路径 ────────────────────────────────────────────────────────────────
