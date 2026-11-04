@@ -3,6 +3,23 @@
 Notable changes to Cairn. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 version numbers follow semver, with an explicit *experimental* label while the project is pre-1.0.
 
+## [Unreleased] — 0.1.1 maintenance
+
+> Release pending: implementation and local verification are complete on release/0.1.1.
+
+### Fixed
+
+- Index cache invalidation now includes each entry's content SHA-256, so an
+  active → archived edit is detected even when size and mtime are unchanged.
+- The in-memory index is revalidated against the current signature before reuse;
+  a stale disk cache is rejected and rebuilt.
+
+### Tests
+
+- Added warm-index and cold-cache regression tests for same-size, same-mtime
+  archived entries.
+- Test baseline is 226 (123 core + 103 research fixtures).
+
 ## [0.1.0] — 2026-10-25 — First experimental stable baseline
 
 First frozen baseline: behaviour, contract and test set are now fixed for real-world trial.
@@ -72,3 +89,4 @@ This is **experimental software** — read *Known limitations* before relying on
 - Cairn is **not** a prompt-injection defence and does not replace the host's sandbox.
 
 [0.1.0]: https://github.com/mokuyoaxis/cairn/releases/tag/v0.1.0
+- Cache validation remains local and deterministic; no dependency or network path was added.

@@ -226,6 +226,7 @@ CAIRN_HOME=/tmp/cairn-clean python3 cairn.py audit
 - `scope` 仅在调用方显式声明（`--scope` / `CAIRN_SCOPE`）时参与门控，不从 query 推断；
   `verified_at` 不自动过期（仅 lint 警告），冲突检测未实现；
 - 没有对 Hook 宿主协议的跨平台端到端安全测试；
+- 缓存撤回传播：`0.1.1` 通过条目内容签名检测同大小、保留 mtime 的 active→archived 修改；仍存在“计算签名后、实际使用索引前”被外部改写的 TOCTOU 窗口。
 - 第三方参考材料的许可证/署名义务尚未完成发布前核对。
 
 安全问题和普通 bug 一样，需要可复现步骤、影响范围和回归测试；不要用“静默通过”掩盖失败。
