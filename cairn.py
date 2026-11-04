@@ -211,7 +211,7 @@ class Index:
         results.sort(key=lambda x: (-x[0], x[4]["name"]))
         return results[:limit]
 
-_INDEX = None
+_INDEX, _INDEX_SIG = None, None
 
 def _to_plain(idx: "Index") -> dict:
     """Counter → 普通 dict，pickle 反序列化快 4 倍。"""
@@ -234,7 +234,7 @@ def _from_plain(data: dict) -> "Index":
     return idx
 
 def _file_sig():
-    """(文件名, mtime_ns, size) 列表，缓存有效性判据。"""
+    """(文件名, mtime_ns, size, ctime_ns, sha256) 列表，缓存有效性判据。"""
     d = entries_dir()
     if not d.is_dir():
         return []
@@ -242,7 +242,8 @@ def _file_sig():
     for path in sorted(d.glob("*.md")):
         try:
             st = path.stat()
-            sig.append((path.name, st.st_mtime_ns, st.st_size))
+            sig.append((path.name, st.st_mtime_ns, st.st_size, st.st_ctime_ns,
+                        hashlib.sha256(path.read_bytes()).hexdigest()))
         except OSError:
             continue
     return sig
@@ -251,11 +252,12 @@ def _cache_file() -> Path:
     return data_home() / "cache" / "index.pkl"
 
 def get_index(force: bool = False) -> Index:
-    """优先读缓存；失效判据是全部文件的 (mtime, size)。"""
-    global _INDEX
-    if _INDEX is not None and not force:
-        return _INDEX
+    """优先读缓存；失效判据是全部文件的内容与元数据签名。"""
+    global _INDEX, _INDEX_SIG
     sig = _file_sig()
+    if _INDEX is not None and not force:
+        if _INDEX_SIG == sig:
+            return _INDEX
     cache = _cache_file()
     if not force:
         try:
@@ -263,12 +265,12 @@ def get_index(force: bool = False) -> Index:
                 blob = pickle.load(fh)
             if blob.get("sig") == sig and all("scope" in d and "trust" in d
                                    for d in blob["data"]["docs"]):
-                _INDEX = _from_plain(blob["data"])
+                _INDEX_SIG, _INDEX = sig, _from_plain(blob["data"])
                 return _INDEX
         except Exception:
             pass
     entries, _ = load_entries()
-    _INDEX = Index(entries)
+    _INDEX_SIG, _INDEX = sig, Index(entries)
     try:
         cache.parent.mkdir(parents=True, exist_ok=True)
         tmp = cache.with_suffix(".tmp")
