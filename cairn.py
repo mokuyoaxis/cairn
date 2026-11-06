@@ -472,7 +472,7 @@ def extract_prompt(data) -> str:
 # ── 命令实现 ────────────────────────────────────────────────────────────
 def cmd_recall(args) -> int:
     idx = get_index()
-    results = idx.search(args.query, limit=args.limit)
+    results = idx.search(args.query, limit=None)
     if args.raw:
         for norm, score, matched, d_matched, doc in results[:args.limit]:
             print(f"norm={norm:.2f} m={matched}/desc={d_matched}  {doc['name']}  "
@@ -494,7 +494,7 @@ def cmd_explain(args) -> int:
     idx = get_index()
     qn = len(tokenize(args.query))
     report = []
-    hits = gate(idx.search(args.query, limit=20), args.min_score, args.min_cover,
+    hits = gate(idx.search(args.query, limit=None), args.min_score, args.min_cover,
                 args.min_margin, max_cards=args.limit, q_len=qn, report=report,
                 scope=args.scope)
     print(f"query: {args.query}｜候选 {len(report)} 条｜会注入 {len(hits)} 条")
@@ -783,7 +783,7 @@ def cmd_hook(args) -> int:
     qlog = _text_log_fields("query", prompt)
     seen = _load_seen(sid)
     idx = get_index()
-    results = idx.search(prompt, limit=20)
+    results = idx.search(prompt, limit=None)
     hits = [h for h in gate(results, args.min_score, args.min_cover, args.min_margin,
                             q_len=len(tokenize(prompt)), scope=args.scope)
             if h[4]["name"] not in seen]
