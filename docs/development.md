@@ -6,7 +6,7 @@
 
 ## 0. 摘要
 
-- 226 项单元测试（123 核心 + 103 研究夹具）；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + contract eval + trust eval + audit。
+- 230 项单元测试（127 核心 + 103 研究夹具）；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + contract eval + trust eval + audit。
 - 核心 `cairn.py` 1200 行，零第三方依赖。
 - 单文件核心；控制台/旁路必须独立。
 - Experience Contract v0 与统一 Recall/Explain 已实现；近期优先 Trust & Applicability Eval；控制台暂缓。
@@ -51,6 +51,7 @@ cairn/
     ├── test_explain.py
     ├── test_scope.py      # scope 门控（声明/未声明/缓存兼容）
     ├── test_cache_revocation.py  # 缓存撤回回归（2 项）
+    ├── test_candidate_pool.py    # 候选预算回归（4 项）
     └── test_cli.py        # 其余核心/CLI 覆盖
 ```
 
@@ -73,9 +74,9 @@ CAIRN_HOME="$TMP" python3 cairn.py audit
 python3 eval/contract_eval.py
 ```
 
-当前基线（2026-11-04，0.1.1）：
+当前基线（2026-11-06，0.1.2 维护分支）：
 
-- 226 项测试全绿；
+- 230 项测试全绿；
 - 12 条示例，lint 通过（全部为 `active + verified + source + verified_at` 的 fixture 条目）；
 - 80+60 评测：召回@1 93.8% / @3 100%，注入@1/@3 72.5%，误触发 3.3%；
 - 契约准入 eval：3/3 cases（verified 注入；unverified/quarantine/deprecated/archived 沉默）；
@@ -200,7 +201,7 @@ python3 cairn.py lint
 - **Contract admission eval 最小切片**：`eval/contract_eval.py` 覆盖
   verified/unverified/quarantine/deprecated/archived 的准入与正确沉默；
 - **测试按域拆分**：`tests/test_*.py` + `tests/support.py`；补 CLI/eval/explain 覆盖，
-  共 226 项；
+  共 230 项；
 - **统一 Recall / Explain**：`gate()` 增加可选 `report`，`cairn explain` 与
   recall/hook 共用契约准入、三道门与拒绝理由；只读，不写日志/会话。
 

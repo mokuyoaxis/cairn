@@ -25,7 +25,7 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 | Core | `cairn.py`, 1200 lines, zero third-party dependencies |
 | Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
 | Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, declared-scope filter, three gates |
-| Tests | 226 (123 core + 103 research fixtures) |
+| Tests | 230 (127 core + 103 research fixtures) |
 | Evaluation | 80 positive + 60 negative queries on a 12-entry seed library; contract-admission and trust fixtures |
 | Latency | ~77 ms p95 for a cold hook process (single-machine sample) |
 | License | MIT © 2026 Messia |
@@ -144,7 +144,7 @@ See [docs/security.md](docs/security.md) for the threat model and release checkl
 
 | Metric | Value |
 |---|---|
-| Unit tests | 226 passing (123 core + 103 research fixtures) |
+| Unit tests | 230 passing (127 core + 103 research fixtures) |
 | Seed library | 12 entries |
 | Evaluation set | 80 positive + 60 negative queries |
 | Recall@1 / @3 | 93.8% / 100% |
@@ -162,10 +162,12 @@ Known limitations:
 - thresholds are hand-tuned; `cairn calibrate` is not implemented;
 - synonyms are not understood (`password` does not retrieve `secret` without an alias);
 - the evaluation set is too small to establish generalization;
-- 2-gram tokenization is coarse for very short queries;
+- 2-gram tokenization is coarse for very short queries; long task prompts can dilute query-term coverage, so split them into short retrieval queries;
 - there is no capture loop; `add` is manual;
 - `import` normalizes file names to kebab-case and runs `lint`, but only parses top-level scalar frontmatter (not nested YAML);
 - Experience Contract v0 is metadata, not cryptographic proof; `scope` gates only when the caller declares it (it is never inferred from the query), `verified_at` does not expire automatically, and conflict detection is not implemented;
+- the fixed margin threshold is calibrated on a 12-entry library; larger libraries may silence valid injections;
+- cards are retrieval hints, not full text; long summaries can lose conditions or paths;
 - technical documentation is currently in Simplified Chinese.
 
 Injection length is reported both per query (a no-hit query counts as zero) and per actual injection. It is a diagnostic, not a cost guarantee; see [docs/evaluation.md](docs/evaluation.md).
@@ -174,6 +176,10 @@ Injection length is reported both per query (a no-hit query counts as zero) and 
 phases and **archived as NO-GO** under the current host contract; the offline prototypes remain in
 `eval/` but are not part of the runtime. Summary:
 [docs/research/taxonomy-feasibility-2026.md](docs/research/taxonomy-feasibility-2026.md).
+
+Additional research notes: [experience-retrieval boundaries](docs/research/experience-retrieval-boundaries-2026-10.md)
+and [long-task prompt length](docs/research/long-task-prompt-length-2026-11.md).
+These notes are observational and are not release commitments.
 
 ---
 

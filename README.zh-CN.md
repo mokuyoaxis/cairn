@@ -25,7 +25,7 @@ Cairn 是一个本地优先、确定性的 **Experience Retrieval Layer（经验
 | 核心 | `cairn.py`，1200 行，零第三方依赖 |
 | 存储 | 带 Experience Contract v0 元数据的本地 Markdown 条目；缓存可重建 |
 | 检索 | 中文 2-gram + 英文词元，BM25，契约准入 + 声明式 scope 过滤 + 三道门 |
-| 测试 | 226 项（123 核心 + 103 研究夹具） |
+| 测试 | 230 项（127 核心 + 103 研究夹具） |
 | 评测 | 12 条种子库上的 80 条正例 + 60 条负例；另有契约准入与信任夹具 |
 | 延迟 | 冷启动 hook p95 约 77ms（单机样本） |
 | 许可证 | MIT © 2026 Messia |
@@ -143,7 +143,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 | 指标 | 数值 |
 |---|---|
-| 单元测试 | 226 项通过（123 核心 + 103 研究夹具） |
+| 单元测试 | 230 项通过（127 核心 + 103 研究夹具） |
 | 示例库 | 12 条 |
 | 评测集 | 80 条正例 + 60 条负例 |
 | 召回@1 / @3 | 93.8% / 100% |
@@ -161,10 +161,12 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 - 阈值手工调；`cairn calibrate` 未实现；
 - 同义词无感（`密码` 不会自动检索 `密钥`，需要别名表）；
 - 评测集太小，不足以证明泛化；
-- 2-gram 对很短 query 较粗；
+- 2-gram 对很短 query 较粗；长任务提示会稀释 query 覆盖率，建议拆成短检索 query；
 - 没有捕获闭环；`add` 是手动的；
 - `import` 会把文件名归一为 kebab-case 并自动跑 `lint`，但只解析顶层标量 frontmatter，不解析嵌套 YAML；
 - Experience Contract v0 是元数据，不是加密证明；`scope` 仅在调用方显式声明时才门控（不从 query 推断），`verified_at` 不会自动过期，冲突检测未实现；
+- 固定 margin 阈值只在 12 条种子库上校准；库更大时可能压掉有效注入；
+- 卡片是检索线索，不是全文；长摘要可能丢失限定条件或路径；
 - 技术文档目前为简体中文。
 
 平均注入长度同时按「每 query（未注入计 0）」与「每次实际注入」报告。它是诊断指标，不是成本承诺；详见 [docs/evaluation.md](docs/evaluation.md)。
@@ -172,6 +174,9 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 **研究状态**：曾尝试用诊断式适用性判断门控注入，四轮研究后**归档为 NO-GO**（当前宿主契约下）；
 离线原型保留在 `eval/`，不属于运行时。详见
 [研究总结](docs/research/taxonomy-feasibility-2026.md)。
+
+其他研究记录：[经验检索边界](docs/research/experience-retrieval-boundaries-2026-10.md)
+与[长任务 Prompt 长度](docs/research/long-task-prompt-length-2026-11.md)。
 
 ---
 

@@ -3,6 +3,22 @@
 Notable changes to Cairn. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 version numbers follow semver, with an explicit *experimental* label while the project is pre-1.0.
 
+## [Unreleased] — 0.1.2 maintenance
+
+> Work in progress. Candidate selection now hands the full scored pool to the
+> gate, so ineligible or out-of-scope peers cannot consume the candidate budget.
+
+### Fixed
+
+- Candidate truncation now happens after contract and declared-scope admission;
+  a full candidate pool is passed to the gate for hook, recall and explain.
+
+### Tests
+
+- Added candidate-pool regression tests for hook, recall and explain, including
+  unverified and scope-mismatched peers.
+- Test baseline is 230 (127 core + 103 research fixtures).
+
 ## [0.1.1] — 2026-11-04 — Index revocation maintenance
 
 > Released 2026-11-04 from tag `v0.1.1`.
