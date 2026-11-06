@@ -74,7 +74,7 @@ CAIRN_HOME="$TMP" python3 cairn.py audit
 python3 eval/contract_eval.py
 ```
 
-当前基线（2026-11-06，0.1.2 维护分支）：
+当前基线（2026-11-06，0.1.2）：
 
 - 230 项测试全绿；
 - 12 条示例，lint 通过（全部为 `active + verified + source + verified_at` 的 fixture 条目）；
@@ -84,7 +84,7 @@ python3 eval/contract_eval.py
   过期/scope/冲突/恶意 summary 4 个已知缺口，`--strict` 可将其计为失败；
 - 平均注入 136 字符/query（未注入计 0），实际注入 58/80 次、188 字符/次；
 - `cairn.py` 1200 行，零第三方依赖；
-- hook 冷启动 p95 约 77ms（本机样本，30 次冷启动）。
+- hook 冷启动 p95 约 74ms（本机样本，30 次冷启动）。
 
 基线数字用于回归，不是性能/效果承诺。
 

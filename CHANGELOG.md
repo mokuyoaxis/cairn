@@ -3,10 +3,9 @@
 Notable changes to Cairn. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 version numbers follow semver, with an explicit *experimental* label while the project is pre-1.0.
 
-## [Unreleased] — 0.1.2 maintenance
+## [0.1.2] — 2026-11-06 — Candidate admission maintenance
 
-> Work in progress. Candidate selection now hands the full scored pool to the
-> gate, so ineligible or out-of-scope peers cannot consume the candidate budget.
+> Released 2026-11-06 from tag `v0.1.2`.
 
 ### Fixed
 
@@ -18,6 +17,10 @@ version numbers follow semver, with an explicit *experimental* label while the p
 - Added candidate-pool regression tests for hook, recall and explain, including
   unverified and scope-mismatched peers.
 - Test baseline is 230 (127 core + 103 research fixtures).
+
+### Docs
+
+- Published sanitized research notes for retrieval boundaries and long-task prompt length; no runtime behavior was added by the notes.
 
 ## [0.1.1] — 2026-11-04 — Index revocation maintenance
 
@@ -107,3 +110,4 @@ This is **experimental software** — read *Known limitations* before relying on
 
 [0.1.0]: https://github.com/mokuyoaxis/cairn/releases/tag/v0.1.0
 [0.1.1]: https://github.com/mokuyoaxis/cairn/releases/tag/v0.1.1
+[0.1.2]: https://github.com/mokuyoaxis/cairn/releases/tag/v0.1.2

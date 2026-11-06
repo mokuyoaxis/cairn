@@ -4,7 +4,7 @@
 > 它不是通用 Memory、自动 Skill 生成器或 Markdown 知识管理平台。
 
 **入口**：[English README](../README.md) · [简体中文 README](../README.zh-CN.md)  
-**状态**：v0.1.1（索引撤回维护版本）· 技术文档目前以简体中文为主。
+**状态**：v0.1.2（候选准入维护版本）· 技术文档目前以简体中文为主。
 
 ## 文档地图
 
@@ -20,6 +20,7 @@
 | [research/long-task-prompt-length-2026-11.md](research/long-task-prompt-length-2026-11.md) | 长任务中的 Prompt 长度与库规模对照实验 | 想评估长任务部署边界的人 |
 | [release-notes/v0.1.0.md](release-notes/v0.1.0.md) | v0.1.0 发布说明（英文为主 + 中文摘要），由 Release workflow 发布 | 想了解首个冻结基线做了什么/没做什么的人 |
 | [release-notes/v0.1.1.md](release-notes/v0.1.1.md) | v0.1.1 维护发布说明（英文为主 + 中文摘要） | 想了解索引撤回修复的人 |
+| [release-notes/v0.1.2.md](release-notes/v0.1.2.md) | v0.1.2 维护发布说明（英文为主 + 中文摘要） | 想了解候选准入修复的人 |
 
 ## 阅读顺序
 
