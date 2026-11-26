@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](docs/release-notes/v0.1.2.md)
+[![Version](https://img.shields.io/badge/version-0.1.3-blue.svg)](docs/release-notes/v0.1.3.md)
 [![Release](https://img.shields.io/github/v/release/mokuyoaxis/cairn?color=blue)](https://github.com/mokuyoaxis/cairn/releases)
 [![CI](https://github.com/mokuyoaxis/cairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mokuyoaxis/cairn/actions/workflows/ci.yml)
 
@@ -22,11 +22,11 @@ Zero third-party dependencies. No network by default. Single-file core. Python 3
 
 | Item | Value |
 |---|---|
-| Status | `v0.1.2` — candidate admission maintenance |
+| Status | `v0.1.3` — delivery observability maintenance |
 | Core | `cairn.py`, 1200 lines, zero third-party dependencies |
 | Storage | Local Markdown entries with Experience Contract v0 metadata; rebuildable cache |
 | Retrieval | Chinese 2-gram + English tokens, BM25, contract admission, declared-scope filter, three gates |
-| Tests | 230 (127 core + 103 research fixtures) |
+| Tests | 242 (139 core + 103 research fixtures) |
 | Evaluation | 80 positive + 60 negative queries on a 12-entry seed library; contract-admission and trust fixtures |
 | Latency | ~74 ms p95 for a cold hook process (single-machine sample) |
 | License | MIT © 2026 Messia |
@@ -53,7 +53,7 @@ Cairn is:
 
 - a **retrieval layer** for reusable experience;
 - local-first and deterministic by default;
-- auditable: every injection has a score, a gate decision, and a path;
+- auditable: candidates expose scores and gate decisions; `trace` also shows deduplication, rendering and the card path;
 - read-only at runtime: it never executes entries or edits the library;
 - deliberately small: Markdown storage, a single core file, no external model dependency.
 
@@ -78,6 +78,7 @@ cd cairn
 # The demo writes only to examples/cache and examples/log, both gitignored.
 CAIRN_HOME=./examples python3 cairn.py recall "docker compose config 密钥"
 CAIRN_HOME=./examples python3 cairn.py explain "docker compose config 密钥"
+CAIRN_HOME=./examples python3 cairn.py trace "docker compose config 密钥"
 ```
 
 Example output:
@@ -105,10 +106,10 @@ Cairn returns cards, not documents. If nothing passes the gates, it stays silent
 3. **Admit.** Only entries with `status: active`, `trust: verified`, a non-empty `source`, and a valid `verified_at` may be injected. Imported entries start as `quarantined`.
 4. **Scope filter.** If the caller declares a context scope (`--scope` / `CAIRN_SCOPE`), entries whose `scope` does not intersect it are dropped as `out_of_scope`. Untagged entries stay universal; with no declared scope, behavior is unchanged.
 5. **Gate.** A candidate must pass three independent gates: normalized score, query-term coverage, and a margin over the second candidate.
-6. **Deduplicate.** The same card is injected at most once per session.
+6. **Deduplicate.** The same card is injected at most once per session; only cards actually rendered and successfully emitted consume that opportunity.
 7. **Render.** At most three cards, name + summary + path. Full text is fetched explicitly.
 
-The runtime is read-only. Retrieval, statistics, and validation make no network calls. `cairn explain` runs the same admission and gate pipeline and prints why each candidate was injected or refused.
+The runtime is read-only. Retrieval, statistics, and validation make no network calls. `cairn explain` runs the same admission and gate pipeline and prints why each candidate was injected or refused. `cairn trace` additionally simulates session deduplication and rendering, including budget omission, without writing logs or session state.
 
 ---
 
@@ -145,7 +146,7 @@ See [docs/security.md](docs/security.md) for the threat model and release checkl
 
 | Metric | Value |
 |---|---|
-| Unit tests | 230 passing (127 core + 103 research fixtures) |
+| Unit tests | 242 passing (139 core + 103 research fixtures) |
 | Seed library | 12 entries |
 | Evaluation set | 80 positive + 60 negative queries |
 | Recall@1 / @3 | 93.8% / 100% |
@@ -156,7 +157,7 @@ See [docs/security.md](docs/security.md) for the threat model and release checkl
 | Avg injection (per query / per injection) | 136 / 188 chars |
 | Hook p95 | ~70 ms (single-machine sample) |
 
-These numbers are a **regression baseline**, not a benchmark. The evaluation set is small, thresholds are manual, and a 100% Recall@3 does not mean an experience was injected.
+These numbers are a **regression baseline**, not a benchmark. The evaluation set is small, thresholds are manual, and a 100% Recall@3 does not mean an experience was injected. `trace` reports prospective hook output, not observed host or model receipt.
 
 Known limitations:
 
@@ -189,7 +190,7 @@ These notes are observational and are not release commitments.
 Near-term work is about **contracts, trust, and measurement**, not feature count:
 
 - Phase 0 correctness fixes, the first Git baseline, and **Experience Contract v0** are complete;
-- **Recall / Explain** now share one admission/gate pipeline; `cairn explain` reports per-candidate refusal reasons without changing hook behavior;
+- **Recall / Explain** share one admission/gate pipeline; `cairn trace` extends the same read-only diagnosis through deduplication and rendering without changing hook behavior;
 - a **contract-admission eval** and **Trust & Applicability Eval v0** are in place; declared-scope mismatch is gated and measured, while stale, undeclared-scope, and conflicting injection are measured but not yet gated;
 - add real-task evaluation before claiming user benefit;
 - **diagnostic-style applicability gating was studied and archived as NO-GO** for the current

@@ -165,7 +165,35 @@ query: docker compose 密钥 明文｜候选 6 条｜会注入 1 条
 - 无候选或全部被拒绝时输出 `[SILENT]`，退出码 1；有可注入条目时退出码 0；
 - 支持与 `recall` 相同的 `--limit` 与三道门参数。
 
-### 4.3 `show` / `ls`
+### 4.3 `trace`：从候选到交付的只读诊断
+
+`explain` 回答“为什么某张卡没有过契约或三道门”；`trace` 进一步回答“过门之后，
+是否因会话去重或渲染预算而未实际输出”。
+
+```bash
+python3 cairn.py trace "docker compose config 密钥"
+python3 cairn.py trace "..." --session-id demo
+python3 cairn.py trace "..." --json --payload
+```
+
+轨迹依次是 `retrieve → admit → gate → dedupe → render → host_receipt`。
+除已有拒绝理由外，还包括：
+
+- `already_delivered`：指定的会话 `seen` 已含该卡；
+- `rendered` / `truncated`：完整渲染或首卡截断；
+- `budget_omitted`：因前缀字符预算未进入输出，与已交付不同；
+- `would_emit`：按当前 Hook 逻辑**预计**会输出；`host_receipt` 始终为
+  `not_observed`，不表示真实宿主或模型已经收到。
+
+只读边界：不写日志、不更新 `seen`、不调用宿主、模型或网络；与检索命令一样，
+必要时可重建派生索引缓存。`--session-id` 只读取去重状态。JSON 不保存原始 query、
+原始会话 ID 或 seen 清单，但候选 ID 与预计卡片文本仍可能含敏感信息，不能直接当作
+脱敏审计结果。`--payload` 只生成预计 payload，不调用 `emit`。
+
+有预计输出返回 0，沉默返回 1；执行错误返回 1 并报告 `[FAIL]`。
+实现位于独立只读模块 `cairn_trace.py`，请与 `cairn.py` 一起部署。
+
+### 4.4 `show` / `ls`
 
 ```bash
 python3 cairn.py show config-dump-reveals-secret-values
@@ -177,7 +205,7 @@ python3 cairn.py ls --md        # 输出自动生成的索引文本
 `/` 或 `..`，因此不会读取 `entries/` 之外的文件。`ls --md` 生成的索引仅供阅读/导出，
 不是运行时权威索引。
 
-### 4.4 `lint`
+### 4.5 `lint`
 
 ```bash
 python3 cairn.py lint
@@ -189,7 +217,7 @@ python3 cairn.py lint
 
 空库或错误的 `CAIRN_HOME` 会输出 `[FAIL] 0 条` 并返回 1，不再给出虚假 PASS；排查时同时确认 `ls` 与 `CAIRN_HOME`。
 
-### 4.5 `import` / `prune-links`
+### 4.6 `import` / `prune-links`
 
 ```bash
 python3 cairn.py import ./old-notes --dry-run   # 只看计划，不写库
@@ -209,7 +237,7 @@ python3 cairn.py prune-links
 
 文件名会自动归一为 kebab-case（如 `Bad Name.md` → `bad-name.md`）；纯非 ASCII 文件名会退化为 `entry-<hash>`，避免空 slug。非法日期会被跳过并列入 `[SKIP]`。所有导入条目统一写为 `status: active`、`trust: quarantined`，不复制来源里的 `trust/verified_at`；复核后再手工改为 `verified`。写入后自动跑 `lint`，返回码反映校验结果。`prune-links` 用于删除指向不存在条目的 `[[双链]]`。
 
-### 4.6 `hook`
+### 4.7 `hook`
 
 ```bash
 python3 cairn.py hook --format claude
@@ -225,7 +253,7 @@ python3 cairn.py hook --format json
 - 任何异常都静默返回 0，不阻塞宿主会话；无命中/已去抖时不输出正文；
 - Hook 日志默认不保存原始 prompt，只记指纹、长度、命中条目和门控原因（含 `ineligible`）。
 
-### 4.7 `eval`
+### 4.8 `eval`
 
 ```bash
 CAIRN_HOME=./examples python3 cairn.py eval
@@ -239,7 +267,7 @@ CAIRN_HOME=./examples python3 cairn.py eval --queries eval/queries.jsonl --negat
 两者差距可能同时来自门控与契约。平均注入会分别报告「每 query（未注入计 0）」与
 「每次实际注入」，口径见 [evaluation.md](evaluation.md)。
 
-### 4.8 `audit` / `sanitize`
+### 4.9 `audit` / `sanitize`
 
 ```bash
 python3 cairn.py audit
@@ -264,7 +292,7 @@ python3 cairn.py sanitize --out /tmp/cairn-clean --force
 
 `sanitize` 是**尽力而为的文本替换**，不能替代人工复核。公开前请对输出再跑一次 `CAIRN_HOME=DIR cairn audit`。
 
-### 4.9 `stats` / `feedback` / `nudge`
+### 4.10 `stats` / `feedback` / `nudge`
 
 ```bash
 python3 cairn.py stats

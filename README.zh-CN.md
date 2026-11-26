@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](docs/release-notes/v0.1.2.md)
+[![Version](https://img.shields.io/badge/version-0.1.3-blue.svg)](docs/release-notes/v0.1.3.md)
 [![Release](https://img.shields.io/github/v/release/mokuyoaxis/cairn?color=blue)](https://github.com/mokuyoaxis/cairn/releases)
 [![CI](https://github.com/mokuyoaxis/cairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mokuyoaxis/cairn/actions/workflows/ci.yml)
 
@@ -22,11 +22,11 @@ Cairn 是一个本地优先、确定性的 **Experience Retrieval Layer（经验
 
 | 项目 | 内容 |
 |---|---|
-| 状态 | `v0.1.2` — 候选准入维护版本 |
+| 状态 | `v0.1.3` — 交付可观测性维护版本 |
 | 核心 | `cairn.py`，1200 行，零第三方依赖 |
 | 存储 | 带 Experience Contract v0 元数据的本地 Markdown 条目；缓存可重建 |
 | 检索 | 中文 2-gram + 英文词元，BM25，契约准入 + 声明式 scope 过滤 + 三道门 |
-| 测试 | 230 项（127 核心 + 103 研究夹具） |
+| 测试 | 242 项（139 核心 + 103 研究夹具） |
 | 评测 | 12 条种子库上的 80 条正例 + 60 条负例；另有契约准入与信任夹具 |
 | 延迟 | 冷启动 hook p95 约 74ms（单机样本） |
 | 许可证 | MIT © 2026 Messia |
@@ -78,6 +78,7 @@ cd cairn
 # 演示只写 examples/cache 和 examples/log，两者已 gitignore
 CAIRN_HOME=./examples python3 cairn.py recall "docker compose config 密钥"
 CAIRN_HOME=./examples python3 cairn.py explain "docker compose config 密钥"
+CAIRN_HOME=./examples python3 cairn.py trace "docker compose config 密钥"
 ```
 
 输出示例：
@@ -104,10 +105,10 @@ Cairn 返回卡片，不返回整篇文档。没有条目过门时，它保持�
 2. **打分**：BM25，字段加权 `summary ×3 > name ×2 > body ×1`；分母只算库内真实存在的 query 词。
 3. **准入**：只有 `status: active`、`trust: verified`、`source` 非空且 `verified_at` 有效的条目才可能被注入；导入条目默认 `quarantined`。
 4. **过门**：候选必须通过三道独立门：归一化分数、query 词覆盖率、相对第二名的领先幅度。
-5. **去抖**：同一会话同一张卡片最多注入一次。
+5. **去抖**：同一会话同一张卡片最多注入一次；只有实际渲染并成功输出的卡才消耗这次机会。
 6. **渲染**：最多三张卡片，名字 + summary + 路径；全文按需显式读取。
 
-运行时只读；检索、统计与校验不发起网络请求。`cairn explain` 复用同一套准入与门控，逐条说明注入或拒绝的原因。
+运行时只读；检索、统计与校验不发起网络请求。`cairn explain` 复用同一套准入与门控，逐条说明注入或拒绝的原因。`cairn trace` 进一步模拟会话去重与渲染，显示预算省略等交付损失，但不写日志或会话状态。
 
 ---
 
@@ -144,7 +145,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 
 | 指标 | 数值 |
 |---|---|
-| 单元测试 | 230 项通过（127 核心 + 103 研究夹具） |
+| 单元测试 | 242 项通过（139 核心 + 103 研究夹具） |
 | 示例库 | 12 条 |
 | 评测集 | 80 条正例 + 60 条负例 |
 | 召回@1 / @3 | 93.8% / 100% |
@@ -155,7 +156,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 | 平均注入（每 query / 每次注入） | 136 / 188 字符 |
 | Hook p95 | 约 70ms（单机样本） |
 
-这些数字是**回归基线**，不是 benchmark。评测集很小，阈值是手工定的；Recall@3 100% 不代表经验真的被注入。
+这些数字是**回归基线**，不是 benchmark。评测集很小，阈值是手工定的；Recall@3 100% 不代表经验真的被注入。`trace` 报告的是预计 Hook 输出，不是宿主或模型实际接收的证明。
 
 已知限制：
 
@@ -186,7 +187,7 @@ Codex CLI 使用 `--format codex`；`--format text` 用于本地测试；`--form
 近期重点是**契约、信任与度量**，不是功能数量：
 
 - Phase 0 正确性修复、首个 Git 基线与 **Experience Contract v0** 已完成；
-- **Recall / Explain** 已共用同一套准入与门控；`cairn explain` 输出逐条拒绝理由，不改变 Hook 行为；
+- **Recall / Explain** 共用同一套准入与门控；`cairn trace` 将只读诊断延伸到去重与渲染，不改变 Hook 行为；
 - 已加 **contract-admission eval** 与 **Trust & Applicability Eval v0**；显式 scope 不匹配已门控并测量，过期、未声明 scope、冲突注入仍只测量不门控；
 - 在声称用户收益前，先做真实任务评测；
 - **诊断式适用性门控已研究并归档为 NO-GO**（当前宿主契约下），见

@@ -6,10 +6,10 @@
 
 ## 0. 摘要
 
-- 230 项单元测试（127 核心 + 103 研究夹具）；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + contract eval + trust eval + audit。
+- 242 项单元测试（139 核心 + 103 研究夹具）；CI 在 Python 3.9 与 3.12 上跑 unittest + lint + eval + contract eval + trust eval + audit。
 - 核心 `cairn.py` 1200 行，零第三方依赖。
 - 单文件核心；控制台/旁路必须独立。
-- Experience Contract v0 与统一 Recall/Explain 已实现；近期优先 Trust & Applicability Eval；控制台暂缓。
+- Experience Contract v0、统一 Recall/Explain 与只读 Trace 已实现；近期优先 Trust & Applicability Eval；控制台暂缓。
 
 ## 1. 目录
 
@@ -20,6 +20,7 @@ cairn/
 ├── LICENSE                # MIT（© 2026 Messia）
 ├── cairn                  # 可执行入口（runpy 调 cairn.py）
 ├── cairn.py               # 单文件核心
+├── cairn_trace.py         # 独立只读 trace 模块
 ├── .github/workflows/ci.yml  # GitHub Actions
 ├── docs/
 │   ├── README.md          # 文档索引
@@ -45,6 +46,8 @@ cairn/
     ├── test_retrieval.py
     ├── test_storage.py
     ├── test_hooks.py
+    ├── test_hook_delivery.py  # 实际交付与 seen 记账
+    ├── test_trace.py         # 只读交付轨迹
     ├── test_contract.py
     ├── test_security.py
     ├── test_eval.py
@@ -74,9 +77,9 @@ CAIRN_HOME="$TMP" python3 cairn.py audit
 python3 eval/contract_eval.py
 ```
 
-当前基线（2026-11-06，0.1.2）：
+当前基线（2026-11-26，0.1.3）：
 
-- 230 项测试全绿；
+- 242 项测试全绿；
 - 12 条示例，lint 通过（全部为 `active + verified + source + verified_at` 的 fixture 条目）；
 - 80+60 评测：召回@1 93.8% / @3 100%，注入@1/@3 72.5%，误触发 3.3%；
 - 契约准入 eval：3/3 cases（verified 注入；unverified/quarantine/deprecated/archived 沉默）；
@@ -109,7 +112,7 @@ python3 eval/contract_eval.py
 | version consistency | `VERSION` == `cairn --version`，且 README / README.zh-CN / docs / CHANGELOG 含同一版本串 |
 | docs metrics | 文档中的实测数字必须等于 `cairn eval` 的实际输出，评测集表必须等于 fixture 行数（防文档漂移） |
 
-CI 不安装第三方依赖；没有网络调用。README 顶部的 CI badge 指向该 workflow。
+CI 不安装第三方依赖；测试和 fixture 不发起网络请求。README 顶部的 CI badge 指向该 workflow。
 
 发版走单独的 [.github/workflows/release.yml](../.github/workflows/release.yml)：推送 `v*` tag 时用
 `GITHUB_TOKEN` 创建 GitHub Release，正文取自 `docs/release-notes/<tag>.md`（英文为主 + 中文摘要），
@@ -201,7 +204,8 @@ python3 cairn.py lint
 - **Contract admission eval 最小切片**：`eval/contract_eval.py` 覆盖
   verified/unverified/quarantine/deprecated/archived 的准入与正确沉默；
 - **测试按域拆分**：`tests/test_*.py` + `tests/support.py`；补 CLI/eval/explain 覆盖，
-  共 230 项；
+  共 242 项；
+- **Trace**：独立 `cairn_trace.py` 解释去重与渲染；核心只保留薄入口。
 - **统一 Recall / Explain**：`gate()` 增加可选 `report`，`cairn explain` 与
   recall/hook 共用契约准入、三道门与拒绝理由；只读，不写日志/会话。
 

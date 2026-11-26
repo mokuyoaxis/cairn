@@ -170,7 +170,9 @@ Experience Contract v0 是注入前的硬准入，不参与排序：
 
 ## 8. 会话去抖
 
-同一会话同一张卡片只注入一次。会话标识优先取 Hook stdin 的 `session_id`，否则用 `CAIRN_SESSION`，再否则 `default`。
+同一会话同一张卡片只注入一次。只有实际进入渲染结果并成功完成 `emit` 的卡才写入
+`seen`；被字符预算省略、渲染失败或输出失败的卡不会消耗后续交付机会。
+会话标识优先取 Hook stdin 的 `session_id`，否则用 `CAIRN_SESSION`，再否则 `default`。
 
 会话文件存放在 `log/session-*.json`，默认 12 小时后视为过期。去抖的目标是避免长会话里反复注入同一张卡片，而不是做完整的会话记忆。
 
@@ -232,3 +234,14 @@ Cairn 区分两种失败：
 
 Cairn 是 Local-first Experience Retrieval Layer，不是通用 Memory、自动 Skill 生成器或 Markdown 知识管理平台。  
 存储可以继续用 Markdown，但文件树不是产品界面；默认交互应是搜索/召回卡片，而不是浏览目录。
+
+
+## 15. Trace：交付轨迹的只读投影
+
+`cairn trace` 复用核心的检索、契约、门控、会话读取和渲染，不另建评分或注入策略。
+它依次显示检索、准入、门控、去重、渲染与宿主观测状态，区分 `budget_omitted`、
+`already_delivered` 与真正进入预计 payload 的卡。
+
+核心只提供薄 CLI 入口，轨迹实现位于独立 `cairn_trace.py`；核心仍保持单文件检索核心与
+1200 行预算。Trace 不写日志、不更新 seen、不调用宿主，JSON 中的 `would_emit` 不是
+宿主接收证明，`host_receipt` 始终为 `not_observed`。

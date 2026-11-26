@@ -3,6 +3,27 @@
 Notable changes to Cairn. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 version numbers follow semver, with an explicit *experimental* label while the project is pre-1.0.
 
+## [0.1.3] — 2026-11-26 — Delivery observability maintenance
+
+> Released 2026-11-26 from tag `v0.1.3`.
+
+### Added
+
+- `cairn trace`: read-only delivery tracing from retrieval through contract,
+  gates, session deduplication and rendering, with optional JSON and prospective
+  hook payload output. The implementation lives in `cairn_trace.py`; keep it
+  beside `cairn.py` when deploying. It never claims host receipt.
+
+### Fixed
+
+- Hook sessions now record only cards actually rendered and successfully emitted;
+  budget-omitted cards and failed deliveries remain eligible for a later retry.
+
+### Tests
+
+- Added delivery-bookkeeping and trace regression coverage; 242 tests
+  (139 core + 103 research fixtures).
+
 ## [0.1.2] — 2026-11-06 — Candidate admission maintenance
 
 > Released 2026-11-06 from tag `v0.1.2`.
@@ -108,6 +129,7 @@ This is **experimental software** — read *Known limitations* before relying on
   gate reasons — never raw prompts unless `CAIRN_LOG_QUERY_PREVIEW=1` (still redacted).
 - Cairn is **not** a prompt-injection defence and does not replace the host's sandbox.
 
+[0.1.3]: https://github.com/mokuyoaxis/cairn/releases/tag/v0.1.3
 [0.1.0]: https://github.com/mokuyoaxis/cairn/releases/tag/v0.1.0
 [0.1.1]: https://github.com/mokuyoaxis/cairn/releases/tag/v0.1.1
 [0.1.2]: https://github.com/mokuyoaxis/cairn/releases/tag/v0.1.2

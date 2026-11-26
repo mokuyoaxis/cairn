@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import pickle
 import json
+import pickle
 import math
 import os
 import re
@@ -14,10 +14,11 @@ import sys
 import tempfile
 import time
 from collections import Counter
+from contextlib import suppress
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 
 
 # ── 路径 ────────────────────────────────────────────────────────────────
@@ -341,27 +342,22 @@ def _session_file(sid: str) -> Path:
     return log_dir() / f"session-{safe}.json"
 
 def _load_seen(sid: str) -> set:
-    f = _session_file(sid)
-    try:
-        data = json.loads(f.read_text(encoding="utf-8"))
-        if time.time() - data.get("ts", 0) > 12 * 3600:
-            return set()
-        return set(data.get("seen", []))
-    except Exception:
-        return set()
+    with suppress(Exception):
+        data = json.loads(_session_file(sid).read_text(encoding="utf-8"))
+        if not time.time() - data.get("ts", 0) > 12 * 3600:
+            return set(data.get("seen", []))
+    return set()
 
 def _save_seen(sid: str, seen: set) -> None:
-    try:
+    with suppress(Exception):
         f = _session_file(sid)
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(json.dumps({"ts": time.time(), "seen": sorted(seen)},
                                 ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
 
 
 # ── 卡片渲染 ────────────────────────────────────────────────────────────
-def render_cards(hits, max_chars: int = MAX_CARD_CHARS) -> str:
+def render_cards(hits, max_chars: int = MAX_CARD_CHARS, delivered=None) -> str:
     lines = ["【cairn】可能有用的既往经验（按相关度排序）："]
     used = len(lines[0])
     for norm, score, matched, d_matched, doc in hits:
@@ -371,16 +367,17 @@ def render_cards(hits, max_chars: int = MAX_CARD_CHARS) -> str:
         if len(line) > max_chars:
             line = line[:max_chars - 20] + "…（已截断）"
         lines.append(line)
+        if delivered is not None:
+            delivered.append(doc["name"])
         used += len(line)
     lines.append("需要全文用 `cairn show <name>`；都不相关就忽略本提示。")
     return "\n".join(lines)
 
 def contract_reason(doc) -> str:
     """不可注入的原因；可注入时返回空串。"""
-    if doc.get("status") != "active":
-        return f"status={doc.get('status')}"
-    if doc.get("trust") != "verified":
-        return f"trust={doc.get('trust')}"
+    for field, required in (("status", "active"), ("trust", "verified")):
+        if doc.get(field) != required:
+            return f"{field}={doc.get(field)}"
     if not doc.get("source"):
         return "缺 source"
     if not DATE_RE.match(doc.get("verified_at") or ""):
@@ -422,11 +419,10 @@ def gate(results, min_score: float = DEFAULT_MIN_SCORE,
     if not ok:
         return []
     top, second = ok[0][0], (ok[1][0] if len(ok) > 1 else 0.0)
-    if top < min_score:
-        note(ok, "low_score")
-        return []
-    if top < min_margin * max(second, 1e-9):
-        note(ok, "low_margin")
+    reason = ("low_score" if top < min_score else
+              "low_margin" if top < min_margin * max(second, 1e-9) else "")
+    if reason:
+        note(ok, reason)
         return []
     out = []
     for r in ok:
@@ -442,13 +438,11 @@ def emit(text: str, fmt: str) -> None:
     if fmt == "claude":
         payload = {"hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit", "additionalContext": text}}
-        sys.stdout.write(json.dumps(payload, ensure_ascii=False))
-    elif fmt == "codex":
-        sys.stdout.write(json.dumps({"systemMessage": text}, ensure_ascii=False))
-    elif fmt == "json":
-        sys.stdout.write(json.dumps({"cairn": text}, ensure_ascii=False))
+    elif fmt in ("codex", "json"):
+        payload = {"systemMessage" if fmt == "codex" else "cairn": text}
     else:
-        sys.stdout.write(text + "\n")
+        payload = None
+    sys.stdout.write(text + "\n" if payload is None else json.dumps(payload, ensure_ascii=False))
     sys.stdout.flush()
 
 def extract_prompt(data) -> str:
@@ -491,24 +485,26 @@ def cmd_recall(args) -> int:
 
 def cmd_explain(args) -> int:
     """解释检索的候选/分数/契约/门控；只读。"""
-    idx = get_index()
     qn = len(tokenize(args.query))
     report = []
-    hits = gate(idx.search(args.query, limit=None), args.min_score, args.min_cover,
+    hits = gate(get_index().search(args.query, limit=None), args.min_score, args.min_cover,
                 args.min_margin, max_cards=args.limit, q_len=qn, report=report,
                 scope=args.scope)
     print(f"query: {args.query}｜候选 {len(report)} 条｜会注入 {len(hits)} 条")
     print(f"门: score≥{args.min_score:.2f} cover≥{args.min_cover:.0%} "
           f"margin≥{args.min_margin:.2f}x｜scope={args.scope or '未声明'}")
     for (norm, _, matched, _, doc), why in sorted(report, key=lambda x: -x[0][0]):
-        extra = ("  " + contract_reason(doc) if why == "ineligible"
-                 else f"  scope={doc.get('scope') or '-'}" if why == "out_of_scope" else "")
-        tag = "INJECT" if why == "hit" else why
-        print(f"  [{tag}] {doc['name']}  norm={norm:.2f} cover={matched}/{qn}"
-              f"{extra}  —  {doc['summary'][:40]}")
+        extra = ("  " + contract_reason(doc) if why == "ineligible" else
+                 f"  scope={doc.get('scope') or '-'}" if why == "out_of_scope" else "")
+        print(f"  [{'INJECT' if why == 'hit' else why}] {doc['name']}  norm={norm:.2f}"
+              f" cover={matched}/{qn}{extra}  —  {doc['summary'][:40]}")
     if not hits:
         print("[SILENT] 没有条目会进入上下文")
     return 0 if hits else 1
+
+def cmd_trace(args) -> int:
+    from cairn_trace import run
+    return run(sys.modules[__name__], args)
 
 def cmd_show(args) -> int:
     path = entries_dir() / f"{args.name}.md"
@@ -790,20 +786,18 @@ def cmd_hook(args) -> int:
     reason = ("ineligible" if results and not any(is_injectable(r[4]) for r in results)
               else "below_gate")
     if not hits:
-        if results:
-            _append_log("miss", {"reason": reason, "session": session,
-                                 "top": results[0][4]["name"], "norm": round(results[0][0], 3),
-                                 **qlog})
-        else:
-            _append_log("miss", {"reason": "no_hit", "session": session, **qlog})
+        details = {"top": results[0][4]["name"], "norm": round(results[0][0], 3)} if results else {}
+        _append_log("miss", {"reason": reason if results else "no_hit", "session": session,
+                             **details, **qlog})
         return 0
-    seen.update(h[4]["name"] for h in hits)
+    delivered = []
+    emit(render_cards(hits, delivered=delivered), args.format)
+    seen.update(delivered)
     _save_seen(sid, seen)
     _append_log("inject", {"session": session,
                            "slugs": [h[4]["name"] for h in hits],
                            "norms": [round(h[0], 3) for h in hits],
                            **qlog})
-    emit(render_cards(hits), args.format)
     return 0
 
 def cmd_feedback(args) -> int:
@@ -1112,17 +1106,23 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="cairn", description="极简经验库")
     p.add_argument("--version", action="version", version=f"cairn {VERSION}")
     sub = p.add_subparsers(dest="cmd", required=True)
-    s = _sub(sub, "recall", cmd_recall, "手动检索")
-    s.add_argument("query")
-    s.add_argument("--limit", type=int, default=3)
-    s.add_argument("--raw", action="store_true", help="打印原始分数")
-    add_gate_args(s)
+    for name, func, text in (("recall", cmd_recall, "手动检索"),
+                             ("explain", cmd_explain, "解释检索的契约准入与门控")):
+        s = _sub(sub, name, func, text)
+        s.add_argument("query")
+        s.add_argument("--limit", type=int, default=3)
+        if name == "recall":
+            s.add_argument("--raw", action="store_true", help="打印原始分数")
+        add_gate_args(s)
 
-    s = _sub(sub, "explain", cmd_explain, "解释检索的契约准入与门控")
+    s = _sub(sub, "trace", cmd_trace, "只读解释检索到交付的完整过程")
     s.add_argument("query")
-    s.add_argument("--limit", type=int, default=3)
+    s.add_argument("--session-id", help="只读取该会话的 seen 状态，不更新")
+    s.add_argument("--json", action="store_true", help="输出机器可读轨迹")
+    s.add_argument("--payload", action="store_true", help="包含预计 hook payload")
+    s.add_argument("--format", default="claude", choices=("claude", "codex", "text", "json"))
+    s.add_argument("--limit", type=int, default=MAX_CARDS)
     add_gate_args(s)
-
     s = _sub(sub, "show", cmd_show, "打印条目全文（记一次命中）")
     s.add_argument("name")
 

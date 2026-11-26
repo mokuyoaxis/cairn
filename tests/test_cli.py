@@ -124,7 +124,7 @@ class TestCLI(Base):
         result = subprocess.run([str(exe), "--version"], capture_output=True,
                                 text=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("cairn 0.1.2", result.stdout)
+        self.assertEqual(result.stdout.strip(), f"cairn {cairn.VERSION}")
 
 
 if __name__ == "__main__":
