@@ -6,6 +6,15 @@
 [![Release](https://img.shields.io/github/v/release/mokuyoaxis/cairn?color=blue)](https://github.com/mokuyoaxis/cairn/releases)
 [![CI](https://github.com/mokuyoaxis/cairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mokuyoaxis/cairn/actions/workflows/ci.yml)
 
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/iris-anniversary-1128-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/iris-anniversary-1128.svg">
+    <img src="docs/assets/iris-anniversary-1128.svg" width="28" height="28" alt="November 28 Anniversary Special Edition Mark (M and iris)">
+  </picture>
+  <sub>November 28 Anniversary Special Edition · 2026-11-28</sub>
+</p>
+
 **Local-first experience retrieval for AI coding agents.**
 
 Cairn is a local-first, deterministic **Experience Retrieval Layer**. At prompt time, it searches a local Markdown library and places a small number of high-signal experience cards into the agent's context. It does not ask the agent to remember to search, and it does not inject entire documents.

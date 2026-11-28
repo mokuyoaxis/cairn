@@ -6,6 +6,15 @@
 [![Release](https://img.shields.io/github/v/release/mokuyoaxis/cairn?color=blue)](https://github.com/mokuyoaxis/cairn/releases)
 [![CI](https://github.com/mokuyoaxis/cairn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mokuyoaxis/cairn/actions/workflows/ci.yml)
 
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/iris-anniversary-1128-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/iris-anniversary-1128.svg">
+    <img src="docs/assets/iris-anniversary-1128.svg" width="28" height="28" alt="11.28 纪念日特别版徽标（M 与鸢尾花）">
+  </picture>
+  <sub>11.28 纪念日特别版 · 2026-11-28</sub>
+</p>
+
 **面向 AI Coding Agent 的本地优先经验检索层。**
 
 Cairn 是一个本地优先、确定性的 **Experience Retrieval Layer（经验检索层）**。每次提问时，它在本地 Markdown 经验库中检索，把少量高信号的「经验卡片」放进上下文；它不要求 Agent 记得去查，也不把整篇文档塞进 prompt。
